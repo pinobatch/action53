@@ -1,0 +1,140 @@
+0.06wip2 (2018-03-xx)
+* Menu: Compress border graphics
+* Menu: Read notice strings on title screen from a list pointed to in
+  the keyblock, instead of hardcoded strings with hardcoded addresses
+* Menu: Rearrange modules for more efficient use of page-aligned ROM
+* a53build: Title screen commands go in [title] section of cfg file;
+  most other commands must be in [games]
+* a53build: Add list of title screen notice strings to the last bank
+* autosubmulti: Disable NMI in bottom half exit patch
+* Convert README to Markdown
+
+0.06wip1 (2018-02-03)
+* quadanalyze: Fall back to wave module if SoX not installed
+* quadanalyze: Don't hardcode input and output filenames
+* Menu: Move controller detection before title screen, relying on
+  Reset press rather than hot plugging
+* Menu: Shooting Zapper offscreen changes pages
+* Menu: When Zapper present, read it in 25% of frames
+* Menu: Don't poll Zapper in tab bar; move sprite 0 below tab bar
+* Menu: Make screenshot solid while it is changing
+* Menu: Screenshots can have up to 10 colors
+* Menu: New TV border by tokumaru, mostly based on Sony Trinitron
+  KV-20TR23
+* innie: Config file character encoding is UTF-8
+* a53build: User can choose characters for code units above $80
+  by editing a53charset.py
+
+0.05wip4 (2017-04-21)
+* Menu: Don't include iNES header in menu-only binary to discourage
+  accidental execution (requested by rainwarrior and dustmop)
+* Menu: Display error if key block is missing a screenshot
+  (requested by dustmop)
+* autosubmulti: Map from mirroring to map mode bit 0 was backward
+  (reported by RogerBidon)
+* a53build: Print exception message for each ROM that failed to load
+  (requested by JRoatch)
+* a53build: Make paths relative to config file's directory
+  (requested by JRoatch)
+* a53build: Config file can change path of menu binary
+* a53build: Screenshot converter shares NES palette with savtool
+* a53build: Receive name of config file on command line
+* makefile: `make dist` builds and packages both the menu source and
+  one or more collections
+* Workaround for Info-ZIP Zip's nonzero exit status when no changes
+  are needed <https://stackoverflow.com/a/19258421/2738262>
+* Docs: Mention new features related to Action 53 mapper
+
+0.05wip3 (2017-04-08)
+* Menu: Integrate JRoatch's coredump tool
+* Menu: Remove debug code that corrupted the background when Up is
+  held (reported by Greg Caldwell)
+* exitpatch: Exit patches do not set stack pointer, so that coredump
+  (A+B+Reset) can see the stack pointer
+* exitpatch: Fixed marking exitmethod=none banks as already patched
+* a53build: 32K mappers (BNROM, AOROM) default to last PRG bank
+  instead of first, working around an exit patch problem
+* a53build: Load ROMs on a blank-named page but don't list them
+  as titles, to allow including unreachable TCRF-bait content
+* Add tools/prgunused.py to find runs of 32 or more bytes of
+  value $00 or $FF in the PRG ROM of an iNES image
+
+0.05wip2 (2017-03-09)
+* Menu: Include title screen in data part of last bank (near ROM
+  directory) instead of menu executable
+* a53build: Set filename and palette of title screen with config
+  file keywords titlescreen= and titlepalette=
+* a53build: Handle grayscale mode screenshots and indexed
+  screenshots with black not first
+* a53build: Correctly exit-patch larger ROMs (breaks a53extract)
+
+0.05wip1 (2017-02-25)
+* Menu: Update music engine from Pently 3 to Pently current
+* Menu: Update VWF engine to unrolled shift version
+* Menu: Update source code file naming conventions
+* Menu: Remove antialiasing from start button notice
+* tools/*: Convert to Python 3
+* makefile: Work around quirks in Python for Windows
+* a53build: Specify unused ranges for multiple PRG banks in one
+  activity
+* a53build: ROMs using Action 53 mapper (28) boot as if they're
+  UxROM (2)
+* a53build: Refactor title validation and ROM patch parsing into
+  separate subroutine
+* a53build: If prgbank not given, guess last ROM bank for
+  UxROM (2) and Action 53 or first for others
+* a53build: Fixed several title parsing error messages
+* a53build: Sort ROMs by descending PRG size before inserting them,
+  fixing arbitrary mixes of C?NROM and [ABU]NROM
+* autosubmulti: Don't limit input or output to one directory
+
+0.04 (2014-11-06)
+* Menu: Fixed certain combinations of tab lengths causing blank
+  block in 11th line of tab display
+* Menu: Bank arrow sprite positioned correctly even if tab width
+  differs from first tab's width
+* Menu: Fixed uncleared line caused by rapidly switching from a
+  long to medium to short page
+* Menu: Performs a write sequence to fully initialize mapper 28
+  without losing support for mapper 34
+* Menu: Can customize the title screen using a .png file and a
+  palette specified in the makefile
+* a53build: startbank= option to leave several 32K banks blank
+  at the start of the ROM, for adding mapper 28 UNROM games
+* a53build: blank banks inserted as power-of-two padding are no
+  longer mistakenly included in the ROM directory
+* innie: Supports [section title] syntax
+* a53extract: support ROMs created with startbank=
+* Collection: moved NES15 into unused space in Concentration Room
+* Collection: added Russian Roulette to unused space in
+  Concentration Room
+* Collection: abandoned author-based groups
+* Collection is 12 games and 3 toys in 256 KiB
+
+0.03 (2012-06-21)
+* FFD: pads to power of 2 banks early instead of adding banks on
+  demand during CHR and screenshot insertion
+* Can insert CHR and screenshot data into the last bank if needed
+* New values for number of players: 2-4 alt and 2-6 alt
+* "Make your selection now!"
+* Collection: properly clear top score in Munchie Attack
+* Collection: replaced LJ65 with NES15
+* Collection: added Pogo Cats
+* Collection is 12 games and 2 toys in 512 KiB
+
+0.02 (2012-02-10)
+* Menu: easier to see which tab is selected
+* Menu: select an activity with Super NES Mouse in port 1
+* Menu: select an activity with Zapper in port 2
+* Menu: controller reading is DPCM-unsafe for mouse compatibility
+* Menu is 7.5 KiB
+* FFD: allocating end of slice no longer invalidates entire slice
+* Reset patch: made the relocatable patch actually work
+* Collection: added Munchie Attack to unused space in LAN Master
+* Collection: moved FHBG into unused space in Slappin'
+* Collection: moved MineShaft into unused space in Zap Ruder
+* Collection is 11 games and 2 toys in 256 KiB
+
+0.01 (2012-02-02)
+* Initial release
+* Collection is 10 games and 2 toys in 512 KiB

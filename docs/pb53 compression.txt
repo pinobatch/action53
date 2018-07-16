@@ -1,0 +1,27 @@
+The 2011 continuation of the Who's Cuter project demonstrated a CHR codec called PB8, which operated on 8-byte packets (hence the name). Each packet started with an 8-bit flags byte telling whether each byte in the packet was new (0) or a repeat of the previous byte (1). However, if the first byte of a packet was a repeat, it would use $00 as the byte's value; this behavior is called "top zero".
+
+The PB8 decoder in Who's Cuter decompresses to RAM at roughly 30 cycles per output byte, which is much faster than the roughly 400 cycles per byte of 2BT (pixel RLE).  A semi-unrolled copy to VRAM takes 9 cycles per byte.  If we were to use PB8 and leave the screen off, we wouldn't even need a loading bar because it'd be 10 times faster than the loader in mgcmenu, or less than 15 frames.
+
+But for the sake of space efficiency, I've discovered various aspects of the CHR ROM of the games in Action 53 that could be used to save a bunch of space.
+
+LAN Master and Lawn Mower share a *lot* of tiles between $0000-$0FFF and $1000-$1FFF because they switch between the two to animate tiles in the game area.  Slappin' Bitches just sets $1000-$1FFF equal to $0000-$0FFF.
+
+But PB8 doesn't support copying entire tiles from the first half of VRAM.  Nor do I especially want to copy.  So instead, I'll decode $0000-$0FFF and $1000-$1FFF in parallel.
+
+Control byte for plane 0
+$00-$7F: Each set bit repeats the byte above it
+$80: Equivalent to $7F $00 (tile uses colors 0 and 2)
+$81: Equivalent to $7F $FF (tile uses colors 1 and 3)
+$82: Copy tile from 16 bytes back
+$83: Copy tile from 4096 bytes back
+$84: Equivalent to $7F $00 $7F $00 (entire tile color 0)
+$85: Equivalent to $7F $FF $7F $00 (entire tile color 1)
+$86: Equivalent to $7F $00 $7F $FF (entire tile color 2)
+$87: Equivalent to $7F $FF $7F $FF (entire tile color 3)
+
+Control byte for plane 1
+$00-$7F: Each set bit repeats the byte above it
+$80: Equivalent to $7F $00 (tile uses colors 0 and 1)
+$81: Equivalent to $7F $FF (tile uses colors 2 and 3)
+$82: Copy plane from 8 bytes back (tile uses colors 0 and 3)
+$83: XOR plane from 8 bytes back with $FF (tile uses colors 1 and 2)
