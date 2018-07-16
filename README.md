@@ -26,15 +26,12 @@ other programs' CHR ROM and screenshot tile data may be placed here.
 For an NROM-128 program, this unused area automatically includes the
 half of $8000-$BFFF where the reset vector does not point.
 
-For each activity, the ROM builder stores information needed to
+For each activity, the builder stores information needed to
 display it in the menu:  title, author, year of publication, number
 of players, a description with up to 16 lines of play instructions,
-and a screenshot.  The screenshot is 64 by 56 pixels in size and can
-use black and any three other colors from the NES palette.  If no
-screenshot is specified, the ROM builder assigns a fallback image
-to the activity.  It also stores information needed to start the
-activity after the user has chosen it: which PRG and CHR banks it
-uses and where in the program to start running.
+and a screenshot as defined below.  It also stores information
+needed to start the activity after the user has chosen it: which PRG
+and CHR banks it uses and where in the program to start running.
 
 A ROM may have multiple entry points within one PRG bank, one for
 each activity.  This allows a ROM with multiple separate activities
@@ -48,17 +45,17 @@ If no entry point is specified, the builder uses the reset vector
 from the ROM.
 
 A ROM may have multiple CHR banks.  If you specify one, the menu will
-load it into CHR RAM before launching your activity.  I've seen buggy
-startup code from some developers (not naming names) that tries to
-clear the nametables ($2000-$27FF), but it loops too much and ends up
-clearing the pattern tables too, so don't do that.  The ROM builder
-provides a ROM patching mechanism that allows the config file to fix
-minor bugs, such as scribbling over the pattern tables, switching CHR
-banks, or a wrong version number.
+load it into CHR RAM before launching your activity.  Some developers
+have used defective startup code that tries to clear the nametables
+($2000-$27FF), but it loops too much and ends up clearing the pattern
+tables too, so don't do that.  The builder provides a patching
+mechanism that allows the config file to fix minor bugs, such as
+scribbling over the pattern tables, switching CHR banks, or a wrong
+version number.
 
 ROM requirements
 ----------------
-The ROM builder produces a ROM, usually 128 to 2048 KiB.  It can be
+The builder produces a ROM, usually 128 to 2048 KiB.  It can be
 configured to use an extended-BNROM mapper (iNES #34) with vertical
 mirroring or a custom Action 53 mapper (iNES #28).  Each ROM inserted
 into a BNROM collection:
@@ -80,6 +77,46 @@ But if a game actually uses CNROM, as opposed to being a submulti
 with a separate CHR ROM bank for each activity, the cartridge will
 need to have 32 KiB of CHR RAM instead of 8 KiB.
 
+Preparing graphics
+------------------
+A collection needs a title screen and a screenshot for each activity.
+
+The title screen is 30 rows of 32 tiles, each 8 by 8 pixels.
+A picture can use up to 256 different tiles. Each 2 by 2 tile
+(16 by 16 pixel) area can use one of four color sets in the palette.
+Each color set has three colors plus a shared backdrop color.
+
+To save ROM space, text may be overlaid on top of the title screen.
+Each 8x8-pixel area covered by text reduces available tiles by 1.
+For example, three 128-pixel lines of text take 16 tiles each,
+leaving 208 for graphics.
+
+The title screen's palette is specified with a 32-nibble string
+representing a hex dump of NES palette memory ($3F00-$3F0F).
+The following example specifies a black ($0F) backdrop, color set 0
+as grays ($00, $10, $20), color set 1 as reds ($06, $16, $26),
+color set 2 as greens ($0A, $1A, $2A), and color set 3 as blues
+($02, $12, $22).  By convention, the ignored bytes match the
+backdrop color.
+
+    0F0010200F0616260F0A1A2A0F021222
+    ||||||||||||||||||||||||||++++++- Color set 3
+    ||||||||||||||||||||||||++------- Ignored
+    ||||||||||||||||||++++++--------- Color set 2
+    ||||||||||||||||++--------------- Ignored
+    ||||||||||++++++----------------- Color set 1
+    ||||||||++----------------------- Ignored
+    ||++++++------------------------- Color set 0
+    ++------------------------------- Backdrop color
+
+An activity's screenshot is 7 rows of 8 tiles, each 8 by 8 pixels.
+Each tile can use one of two color sets in the palette.  Each color
+set has three colors plus four grays ($0F, $00, $10, and $20).
+If a screenshot fails to meet this restriction, the builder will
+fail and print a diagnostic.  If no screenshot is assigned to an
+activity, the builder assigns a fallback image:
+`../tilesets/screenshots/default.png`
+
 Prerequisites
 -------------
 To build a collection, you'll need Python 3 and Pillow (Python
@@ -90,11 +127,16 @@ https://github.com/pinobatch/nrom-template
 
 Use
 ---
-After you've installed Python and Pillow, make a53games.cfg and put
-it in the tools folder along with a53build.py.  Then run a53build.py,
-and if no fatal errors occurred, a53games.nes should appear in the
-top level folder.  The name of the .nes and .cfg file can be changed
+After you've installed Python and Pillow, make a config file
+and put it in a folder with your ROMs.  Then run this command,
+specifying the filename of the config file and ROM file:
 
+    tools/a53build.py example.cfg example.nes
+
+If no fatal errors occurred, a53games.nes should appear in the
+top level folder.
+
+**Warning: The following mechanism is broken.**  
 The package also includes a tool to extract ROMs from the collection.
 If you have an a53games.nes file, you can extract ROMs, screenshots,
 and the skeleton of a.cfg file by running a53extract.py.  Thus, a
@@ -105,17 +147,16 @@ correspond to the reset patches.
 
 The configuration file
 ----------------------
-The configuration file, a53games.cfg, uses a name-value pair syntax
-similar to that of .ini files but allowing multiple-line values.
-See the docstring at the top of tools/innie.py for detailed
-information on this syntax.
+The configuration file uses a name-value pair syntax similar to that
+of .ini files but allowing multiple-line values.  See the docstring
+at the top of tools/innie.py for detailed syntax information.
 
-A sample a53games.cfg with one activity follows:
+A sample config file with one activity follows:
 
-    # BEGIN a53games.cfg
+    # BEGIN example.cfg
     
     [title]
-    titlescreen=../tilesets/title_screen.png
+    titlescreen=title_screen.png
     titlepalette=0f0010200f1616160f1616160f161616
     
     text=Hi Mom!
@@ -137,11 +178,11 @@ A sample a53games.cfg with one activity follows:
       grappling hook
     .
     players=1-2 alt
-    screenshot=../tilesets/screenshots/Wrecking Ball Boy.png
-    rom=../roms/Wrecking Ball Boy.nes
+    screenshot=screenshots/Wrecking Ball Boy.png
+    rom=roms/Wrecking Ball Boy.nes
     prgunused3=f700-fff9
 
-    # END a53games.cfg
+    # END example.cfg
 
 Let's take that apart, with comments this time:
 
@@ -151,9 +192,9 @@ Commands related to the title screen must appear in this section.
 
     titlescreen=../tilesets/title_screen.png
 
-The title screen is a 256x240 pixel PNG image that may contain
-up to 208 unique tiles.  This and other paths are relative to
-the directory containing the config file.
+The title screen is a 256x240 pixel image as described above.
+This and other paths are relative to the directory containing
+the config file.
 
     titlepalette=0f0010200f1616160f1616160f161616
 
@@ -163,7 +204,8 @@ background image.
     text=Hi Mom!
 
 Adds a line of text.  Multiple-line values are allowed, but
-behavior is undefined if any line is longer than 128 pixels.
+behavior is undefined if any line is longer than 128 pixels,
+which is about 28 characters.
 
     at=64,192
 
@@ -221,14 +263,13 @@ stripped off.  (This escaping method is the same used in SMTP.)
 How many players can play at once.  Acceptable values are
 `1`, `2`, `1-2`, `1-2 alt`, `1-3`, `1-4`, `2-4 alt`, `2-6 alt`, and
 `2-4`.  `2` means the game is for two players only, like
-"Fire Breathers" from Action 52.  If omitted, uses `1`.
+"Fire Breathers" from _Action 52_.  If omitted, uses `1`.
 
-    screenshot=../tilesets/screenshots/Wrecking Ball Boy.png
+    screenshot=screenshots/Wrecking Ball Boy.png
 
-A 64x56 pixel, 4-color screenshot of the activity.  If omitted,
-uses a generic cartridge: `../tilesets/screenshots/default.png`
+A 64x56 pixel screenshot of the activity as described above.
 
-    rom=../roms/Wrecking Ball Boy.nes
+    rom=roms/Wrecking Ball Boy.nes
 
 The path to the ROM containing the activity.
 
