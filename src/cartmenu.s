@@ -18,13 +18,15 @@ ciSrc1 = desc_data_ptr
 ; Above the break
 SPRITE_0_TILE = $01
 BLANK_TILE = $02
-TAB_ARROW_TILE = $03
-OVERLINE_TILE = $04
-TLCORNER_TILE = $05
-TRCORNER_TILE = $06
-TABTITLE_LEFT_SIDE = $07
-TABTITLE_RIGHT_SIDE = $08
-TABTITLE_FIRST_TILE = $109
+OVERLINE_TILE = $03
+TLCORNER_TILE = $04
+TRCORNER_TILE = $05
+TABTITLE_LEFT_SIDE = $06
+TABTITLE_RIGHT_SIDE = $07
+TABTITLE_LEFT_OVERLAP = $08
+TABTITLE_RIGHT_OVERLAP = $09
+TAB_ARROW_TILE = $0F
+TABTITLE_FIRST_TILE = $158
 
 ; Below the break
 ;BLANK_TILE = $02
@@ -514,11 +516,12 @@ right_page:
   jsr unpb53_block_ay
 
   ; Copy the tiles used for sprites 0 and 1 and top tabborders
-  ; to the second pattern table tiles $01 through $08
-  lda #$10
+  ; to the second pattern table tiles $00 through $0F
+  ldx #$10
+  lda #$00
+  stx PPUADDR
   sta PPUADDR
-  sta PPUADDR
-  ldx #8
+;  ldx #16
   jsr unpb53_block
 
   ; Steps to get the menu up:
@@ -775,7 +778,7 @@ nttabloop:
   sta PPUADDR
   lda #$A1
   sta PPUADDR
-  lda #$02
+  lda #BLANK_TILE
   ldx #30
 blankrowattoploop:
   sta PPUDATA
