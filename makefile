@@ -12,8 +12,8 @@
 # These are used in the title of the NES program and the zip file.
 title := a53menu
 version := 0.06wip2
-cfgtitle := a53vol4
-othercfgs := a53vol3 a53minimal
+cfgtitle := demo
+othercfgs := # a53vol3 a53minimal
 cfgversion := page1
 
 # Space-separated list of assembly language files that make up the
@@ -55,7 +55,7 @@ run: $(cfgtitle).nes
 debug: $(cfgtitle).nes
 	$(DEBUGEMU) $<
 
-%.nes: tools/%.cfg $(title).prg tools/a53build.py \
+%.nes: collections/%/a53.cfg $(title).prg tools/a53build.py \
   tools/ines.py tools/innie.py tools/a53charset.py tools/a53screenshot.py
 	$(PY) tools/a53build.py $< $@
 

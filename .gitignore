@@ -1,6 +1,7 @@
 *.sw[a-p]
 *.o
 *~
+/*.nes
 *.prg
 *.chr
 *.qdp
