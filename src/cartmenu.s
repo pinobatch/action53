@@ -18,13 +18,15 @@ ciSrc1 = desc_data_ptr
 ; Above the break
 SPRITE_0_TILE = $01
 BLANK_TILE = $02
-TAB_ARROW_TILE = $03
-OVERLINE_TILE = $04
-TLCORNER_TILE = $05
-TRCORNER_TILE = $06
-TABTITLE_LEFT_SIDE = $07
-TABTITLE_RIGHT_SIDE = $08
-TABTITLE_FIRST_TILE = $109
+OVERLINE_TILE = $03
+TLCORNER_TILE = $04
+TRCORNER_TILE = $05
+TABTITLE_LEFT_SIDE = $06
+TABTITLE_RIGHT_SIDE = $07
+TABTITLE_LEFT_OVERLAP = $08
+TABTITLE_RIGHT_OVERLAP = $09
+TAB_ARROW_TILE = $0F
+TABTITLE_FIRST_TILE = $158
 
 ; Below the break
 ;BLANK_TILE = $02
@@ -514,11 +516,12 @@ right_page:
   jsr unpb53_block_ay
 
   ; Copy the tiles used for sprites 0 and 1 and top tabborders
-  ; to the second pattern table tiles $01 through $08
-  lda #$10
+  ; to the second pattern table tiles $00 through $0F
+  ldx #$10
+  lda #$00
+  stx PPUADDR
   sta PPUADDR
-  sta PPUADDR
-  ldx #8
+;  ldx #16
   jsr unpb53_block
 
   ; Steps to get the menu up:
@@ -754,28 +757,29 @@ clrtxt:
   lda #$62
   sta PPUADDR
   ldy #<TABTITLE_FIRST_TILE
+  lda #TABTITLE_LEFT_SIDE
 each_nttab:
+  sta PPUDATA
   lda tab_tilelens,x
   sta 0
-  lda #TABTITLE_LEFT_SIDE
-  sta PPUDATA
 nttabloop:
   sty PPUDATA
   iny
   dec 0
   bne nttabloop
-  lda #TABTITLE_RIGHT_SIDE
-  sta PPUDATA
   inx
   cpx num_pages
+  lda #TABTITLE_RIGHT_OVERLAP
   bcc each_nttab
+  lda #TABTITLE_RIGHT_SIDE
+  sta PPUDATA
 
   ; Blank row above card body
   lda #$20
   sta PPUADDR
   lda #$A1
   sta PPUADDR
-  lda #$02
+  lda #BLANK_TILE
   ldx #30
 blankrowattoploop:
   sta PPUDATA
@@ -1019,7 +1023,7 @@ findxloop:
   clc
   adc tab_tilelens,x
   inx
-  adc #2
+  adc #1
   bcc findxloop
 found_x:
   asl a
@@ -1031,35 +1035,46 @@ found_x:
   rts
 .endproc
 
+TABBORDER_ADDR = $2082
+TABBORDER_WIDTH = 28
+
 ;;
 ; Draws the bottom border of each tab, which shows the user
 ; which pane is selected.
 .proc blit_step_tabborder
+tabborder_addr_lo = $00
+lside = $01
+
   ; For each tab draw two more than the tile width, in blank ($02)
   ; if the tab is selected or card top border if not.
   lda #VBLANK_NMI
   sta PPUCTRL
   ldx #0
   stx draw_progress
-  lda #$20
+  lda #>TABBORDER_ADDR
   sta PPUADDR
-  lda #$81
+  lda #<TABBORDER_ADDR-1
   sta PPUADDR
+  lda #<TABBORDER_ADDR
+  sta tabborder_addr_lo
   lda #TLCORNER_TILE
   sta PPUDATA
-  ldy #28
-  sty 0
 each_nttab:
   ldy tab_tilelens,x
   iny
-  iny
-  lda #BLANK_TILE
+  lda #OVERLINE_TILE
   cpx cur_page
-  beq nttabloop
-    lda #OVERLINE_TILE
+  bne nttabloop
+    ; The current tab has no bottom border, and it is 1 cell
+    ; wider to account for overlap
+    iny
+    lda tabborder_addr_lo
+    sbc #32
+    sta lside
+    lda #BLANK_TILE
   nttabloop:
   sta PPUDATA
-  dec 0
+  inc tabborder_addr_lo
   dey
   bne nttabloop
   inx
@@ -1067,9 +1082,12 @@ each_nttab:
   bcc each_nttab
 
   ; fill in extra space to the right of the rightmost tab
-  ldx 0
+;  sec
+  lda #<(TABBORDER_ADDR + TABBORDER_WIDTH)
+  sbc tabborder_addr_lo
   beq trcorner
-  bmi no_extra_overline
+  bcc no_extra_overline
+  tax
   lda #OVERLINE_TILE
 finishloop:
   sta PPUDATA
@@ -1079,6 +1097,29 @@ trcorner:
   lda #TRCORNER_TILE
   sta PPUDATA
 no_extra_overline:
+
+  ; If the current tab is not the first, draw the left side tab border
+  ldx cur_page
+  beq no_loverlap
+    lda #>(TABBORDER_ADDR - 32)
+    sta PPUADDR
+    lda lside
+    sta PPUADDR
+    lda #TABTITLE_LEFT_OVERLAP
+    sta PPUDATA
+  no_loverlap:
+  inx
+  cpx num_pages
+  bcs no_roverlap
+    lda #>(TABBORDER_ADDR - 32)
+    sta PPUADDR
+    lda lside
+    sec
+    adc tab_tilelens-1,x
+    sta PPUADDR
+    lda #TABTITLE_RIGHT_OVERLAP
+    sta PPUDATA
+  no_roverlap:
 
   lda #0
   sta draw_progress
@@ -1107,7 +1148,7 @@ have_next_step:
 :
   tay  ; Y = number of rows until selected game
   iny
-  
+
   ; hide the arrow if the description is showing
   lda showing_description
   beq not_hide_for_description
