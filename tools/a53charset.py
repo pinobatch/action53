@@ -12,8 +12,8 @@ extra_codepoints = [
     0x2191, 0x2193, 0x2190, 0x2192,
     # L with stroke, z with dot, e with tail, 1 px space
     0x0141, 0x017C, 0x0119, 0x2423,
-    # bird, unassigned
-    0x1F426, 0xFFFE
+    # bird
+    0x1F426
 ]
 
 # Codecs API boilerplate ############################################
