@@ -6,12 +6,14 @@ import codecs
 # The rest are
 name = 'action53'
 extra_codepoints = [
-    # A button, B button, copyright, unassigned
-    0x24B6, 0x24B7, 0x00A9, 0xFFFE,
+    # A button, B button, copyright, d-pad
+    0x24B6, 0x24B7, 0x00A9, 0x271C,
     # up arrow, down arrow, left arrow, right arrow
     0x2191, 0x2193, 0x2190, 0x2192,
-    # L with stroke, z with dot, e with tail
-    0x0141, 0x017C, 0x0119
+    # L with stroke, z with dot, e with tail, 1 px space
+    0x0141, 0x017C, 0x0119, 0x2423,
+    # bird
+    0x1F426
 ]
 
 # Codecs API boilerplate ############################################

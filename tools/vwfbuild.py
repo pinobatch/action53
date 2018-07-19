@@ -23,6 +23,8 @@ def vwfcvt(filename, tileHt=8):
                 if pixels[x + xt, yt] == sepColor:
                     tilew = x
                     break
+            if tilew == 0:
+                break
             # step 2: encode the pixels
             widths.append(tilew)
             for y in range(tileHt):

@@ -141,7 +141,7 @@ Per https://stackoverflow.com/a/377028/2738262
     
     for path in os.environ["PATH"].split(os.pathsep):
         exe_file = os.path.join(path, program)
-        if os.path.isfile(exe_file) and os.access(fpath, os.X_OK):
+        if os.path.isfile(exe_file) and os.access(exe_file, os.X_OK):
             return exe_file
 
 def _main():
