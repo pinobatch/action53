@@ -11,8 +11,6 @@
 
 .include "pentlyseq.inc"
 
-THINK = 0
-
 .segment "RODATA"
 pently_sfx_table:
   .addr snare2_snd
@@ -80,114 +78,25 @@ pently_instruments:
   ; third byte:
   ; bit 7: cut note if half a row remains
   .byt $88, 2, $00, 0, 0  ; bass
-.if THINK
-  .byt $05, 1, $00, 0, 0 ; trumpet
-  .byt $45, 5, $00, 0, 0  ; acoustic guitar
-  .byt $45, 1, $00, 0, 0  ; sax
-  .byt $86, 12, $80, 0, 0  ; bloop (organ hits)
-.endif
 
 pently_songs:
-  .addr thinkintro_conductor
-.if THINK
-  .addr think_conductor
-.endif
+  .addr intro_conductor
 
 pently_patterns:
-  ; pattern 0: think (about it)
-  .addr think_drums_yeahwhoot
-  .addr think_pedalbass
-.if THINK
-  .addr think_B_bass, think_B_sq1, think_B_sq2
-  .addr think_A_sq2, think_A_sq1, think_A_bass
-  .addr think_backtoB, think_backtoB_drums
-  .addr think_drums
-.endif
+  ; pattern 0: drums
+  .addr amen_drums_and_yeah
 
-;____________________________________________________________________
-; think (about it) theme
-
-thinkintro_conductor:
-  setTempo (116*4)
+intro_conductor:
+  setTempo (128*4)
   playPatNoise 0, 0, 0
-  playPatTri 1, 12, 0
-  waitRows 96
+  waitRows 60
+  playPatNoise 0, 0, 0
+  waitRows 4
   fine
 
-think_drums_yeahwhoot:
-  .byt KICK, DHAT, HAT, DHAT
-  .byt SNARE, DHAT, YEAH, LITESNARE
-  .byt HAT, LITESNARE, HAT, DHAT
-  .byt SNARE, DHAT, WHOOT, DHAT
-  .byt 255
-
-think_pedalbass:
-  .byt N_C|D_4, REST|D_D2, 255
-
-think_conductor:
-.if THINK
-  setTempo (116*4)
-  playPatNoise 10, 0, 0
-  playPatSq2 5, 15, 0
-  playPatSq1 6, 27, 1
-  playPatTri 7, 3, 0
-  waitRows 192
-  playPatNoise 0, 0, 0
-  playPatTri 2, 3, 0
-  playPatSq1 3, 15, 0
-  playPatSq2 4, 15, 0
-  waitRows 176
-  playPatTri 8, 26, 0
-  playPatSq1 8, 33, 1
-  playPatSq2 8, 38, 1
-  playPatNoise 9, 0, 0
-  waitRows 16
-  dalSegno
-
-think_drums:
-  .byt KICK, DHAT, HAT, DHAT
-  .byt SNARE, DHAT, HAT, LITESNARE
-  .byt HAT, LITESNARE, HAT, DHAT
-  .byt SNARE, DHAT, HAT, DHAT
-  .byt 255
-think_A_bass:
-  .byt N_DH|D_8, N_EH|D_8, N_E|D_4, N_DH|D_D8, N_EH|D_8, REST|D_D8
-  .byt 255
-think_A_sq1:
-  .byt INSTRUMENT, 4, N_D, REST|D_8, N_D
-  .byt INSTRUMENT, 2, N_B|D_8
-  .byt INSTRUMENT, 4, N_D, REST|D_D8, N_D
-  .byt INSTRUMENT, 2, N_B, REST|D_8, N_B, REST
-  .byt INSTRUMENT, 4, N_D, REST|D_8, N_D
-  .byt INSTRUMENT, 2, N_B|D_8
-  .byt INSTRUMENT, 4, N_D, REST
-  .byt INSTRUMENT, 1, N_EH|D_D8, N_DH|D_4, REST
-  .byt 255
-think_A_sq2:
-  .byt INSTRUMENT, 3, N_E|D_4, N_G|D_4, N_A|D_4, N_B|D_4
-  .byt N_DH|D_8, N_EH|D_8, REST|D_4
-  .byt INSTRUMENT, 1, N_GSH|D_D8, N_FSH|D_4, REST
-  .byt 255
-think_B_bass:
-  .byt REST|D_1
-  .byt N_GH|D_8, REST, N_GH, REST|D_4, N_FH|D_8, N_GH|D_8, N_G|D_D8, REST
-  .byt 255
-think_B_sq1:
-  .byt REST|D_1
-  .byt INSTRUMENT, 1, N_D|D_8, REST, N_D, REST|D_4
-  .byt INSTRUMENT, 2, N_A|D_8, N_AS|D_8, N_B|D_4
-  .byt 255
-think_B_sq2:
-  .byt REST|D_1
-  .byt INSTRUMENT, 1, N_B|D_8, REST, N_B, REST|D_4
-  .byt INSTRUMENT, 2, N_CH|D_8, N_CSH|D_8, N_DH|D_4
-  .byt 255
-think_backtoB:
-  .byt N_C, REST, N_C, REST, N_C, REST, N_C, REST
-  .byt N_C, REST, N_C, REST, N_C, REST|D_D8, 255
-think_backtoB_drums:
-  .byt KICK|D_4, KICK|D_4
-  .byt SNARE|D_8, SNARE|D_8, SNARE|D_D8, LITESNARE
-  .byt 255
-.endif
-
+amen_drums_and_yeah:
+  .byt KICK, DHAT, KICK, DHAT
+  .byt SNARE, DHAT, HAT, SNARE
+  .byt HAT, LITESNARE, KICK, KICK
+  .byt SNARE, DHAT, YEAH, SNARE
+  .byt PATEND
