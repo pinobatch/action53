@@ -829,11 +829,11 @@ def insert_screenshots(titles, prgbanks, basepath=None):
     """Load screenshots and insert them into unused space.
 
 Return a tuple (scrdir, screenshot_ids).
-scrdir is a byte string with 6 bytes per entry:
-bank, address low, address high, color 1, color 2, color 3
+scrdir is a byte string with 3 bytes per entry:
+bank, address low, address high
 screenshot_ids is a list of scrdir entries, one for each title.
 If i = screenshot_ids[titleno], then the title's entry is
-scrdir[i * 6:i * 6 + 6].
+scrdir[i * 3:i * 3 + 3].
 
 """
     # Load screenshots

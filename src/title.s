@@ -212,7 +212,7 @@ str = $00
       pha
     :
 
-    ; Write tiles to destination in pattern tabledestination address
+    ; Write tiles to destination in pattern table
     lda ciDst+1
     asl a  ; C = which bitplane (0xx0 or 0xx8)
     lda total_tiles
@@ -226,7 +226,6 @@ str = $00
     .endrepeat
     pha
     ldy xand7
-    sta $4444
     jsr copyLineImg
 
     ; Write other bitplane as $00 or $FF
