@@ -227,7 +227,7 @@ titleptr = $00
   jmp start_game
 .endproc
 
-.importzp ciSrc, ciDst, ciBufStart, ciBufEnd
+.importzp ciSrc, ciBufStart, ciBufEnd
 .importzp ciSrc0, ciSrc1
 .import unpb53_some, PB53_outbuf, interbank_fetch, interbank_fetch_buf
 

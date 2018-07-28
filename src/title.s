@@ -2,7 +2,10 @@
 .include "global.inc"
 .include "pently.inc"
 
-.code
+.segment "ZEROPAGE"
+ciDst: .res 2  ; Moved from unpb53.s as it's only used here.
+
+.segment "CODE"
 .proc title_screen
   bit PPUSTATUS
   lda #VBLANK_NMI
@@ -283,7 +286,7 @@ COLOR1ON3 = $E0
 TITLESTRINGS = $FF12
 
 ; Error if no games are added ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-.code
+.segment "CODE"
 .proc no_games_error
   ; Clear tiles 0-63
   lda #0

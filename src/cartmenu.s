@@ -512,17 +512,17 @@ right_page:
   sta PPUADDR
   lda #>select_tiles_chr
   ldy #<select_tiles_chr
-  ldx #32
-  jsr unpb53_block_ay
+  ldx #512/64
+  jsr donut_block_ayx
 
   ; Copy the tiles used for sprites 0 and 1 and top tabborders
   ; to the second pattern table tiles $00 through $0F
-  ldx #$10
-  lda #$00
-  stx PPUADDR
+  lda #$10
   sta PPUADDR
-;  ldx #16
-  jsr unpb53_block
+  lda #$00
+  sta PPUADDR
+  ldx #256/64
+  jsr donut_block_x
 
   ; Steps to get the menu up:
   ; 1. Load the attribute table
@@ -1705,7 +1705,7 @@ attrbits = $01
 .endproc
 
 .segment "RODATA"
-select_tiles_chr: .incbin "obj/nes/select_tiles.chr.pb53"
+select_tiles_chr: .incbin "obj/nes/select_tiles.chr.donut"
 card_palette:
   ;    grayscale        unused           bit 0            bit 1
   .byt $0F,$00,$10,$20, $0F,$16,$16,$16, $0F,$10,$0F,$10, $0F,$0F,$10,$10

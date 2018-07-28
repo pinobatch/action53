@@ -10,11 +10,10 @@
 .export unpb53_some, PB53_outbuf
 .export unpb53_block_ay, unpb53_block
 .export interbank_fetch, interbank_fetch_buf
-.exportzp ciSrc, ciDst, ciBufStart, ciBufEnd
+.exportzp ciSrc, ciBufStart, ciBufEnd
 
 .segment "ZEROPAGE"
 ciSrc: .res 2
-ciDst: .res 2
 ciBufStart: .res 1
 ciBufEnd: .res 1
 PB53_outbuf = $0100

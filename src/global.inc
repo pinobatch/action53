@@ -53,10 +53,12 @@ start_mappercfg  = $02  ; Mapper configuration byte for this activity
 .global bcd8bit
 
 ; unpb8.s fields
-.globalzp ciSrc, ciDst, ciBufStart, ciBufEnd
+.globalzp ciSrc, ciBufStart, ciBufEnd
 .global PB53_outbuf, interbank_fetch_buf
 ; unpb8.s methods
 .global unpb53_some, unpb53_block_ay, unpb53_block, interbank_fetch
+; donut.s methods
+.global donut_decompress_block, donut_block_ayx, donut_block_x
 
 ; vwf_draw.s methods
 .global vwfStrWidth, vwfGlyphWidth, vwfPuts

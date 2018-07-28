@@ -21,7 +21,7 @@ cfgversion := page1
 # (the \ character) at the end of the line and continue on the next.
 objlist := \
   zapkernels vwf7 quadpcm vwf_draw \
-  a53mapper main title cartmenu coredump identify \
+  a53mapper main title cartmenu coredump donut identify \
   unpb53 bcd pads mouse ppuclear paldetect \
   pentlysound pentlymusic musicseq ntscPeriods
 
@@ -79,7 +79,7 @@ $(cfgtitle)-$(cfgversion).7z: $(cfgtitle).nes $(foreach o,$(othercfgs),$(o).nes)
 all: $(title).prg
 
 clean:
-	-rm $(objdir)/*.o $(objdir)/*.sav $(objdir)/*.s $(objdir)/*.chr $(objdir)/*.nam $(objdir)/*.pb53 $(objdir)/*.qdp
+	-rm $(objdir)/*.o $(objdir)/*.sav $(objdir)/*.s $(objdir)/*.chr $(objdir)/*.nam $(objdir)/*.pb53 $(objdir)/*.donut $(objdir)/*.qdp
 
 $(objdir)/index.txt: makefile
 	echo Files produced by build tools go here, but caulk goes where? > $@
@@ -103,7 +103,7 @@ $(objdir)/pentlysound.o $(objdir)/pentlymusic.o: \
   $(srcdir)/pentlyseq.inc $(srcdir)/pentlyconfig.inc $(srcdir)/pently.inc
 
 # Files that depend on .incbin'd files
-$(objdir)/cartmenu.o: $(objdir)/select_tiles.chr.pb53
+$(objdir)/cartmenu.o: $(objdir)/select_tiles.chr.donut
 $(objdir)/quadpcm.o: $(objdir)/selnow.qdp
 $(objdir)/selnow.qdp: tools/quadanalyze.py audio/selnow.wav
 	$(PY) $^ $@
@@ -116,6 +116,9 @@ $(objdir)/ntscPeriods.s: tools/mktables.py
 
 $(objdir)/%.pb53: $(objdir)/%
 	$(PY) tools/pb53.py --raw $< $@
+
+$(objdir)/%.donut: $(objdir)/%
+	$(PY) tools/donut.py -fq $< $@
 
 $(objdir)/%.chr: $(imgdir)/%.png
 	$(PY) tools/pilbmp2nes.py $< $@
