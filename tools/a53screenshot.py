@@ -288,8 +288,6 @@ tiles2 -- list of 8-byte plane 2
 attrs -- attribute bitmap
 palette -- [c4, c5, c6], [c7, c8, c9]
 """
-    import pb53
-
     c4to6 = bytes(palette[0]) + bytes(3)
     c7to9 = bytes(palette[1]) if len(palette) > 1 else b''
     c7to9 = c7to9 + bytes(3)

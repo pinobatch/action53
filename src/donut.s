@@ -7,7 +7,7 @@
 ; code copies.  This file is offered as-is, without any warranty.
 
 .export donut_decompress_block, donut_block_ayx, donut_block_x
-.export donut_block_buffer
+.exportzp donut_block_buffer
 .exportzp donut_stream_ptr
 
 temp = $00  ; 16 bytes are used

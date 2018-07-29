@@ -57,8 +57,11 @@ start_mappercfg  = $02  ; Mapper configuration byte for this activity
 .global PB53_outbuf, interbank_fetch_buf
 ; unpb8.s methods
 .global unpb53_some, unpb53_block_ay, unpb53_block, interbank_fetch
+
 ; donut.s methods
 .global donut_decompress_block, donut_block_ayx, donut_block_x
+; donut.s fields
+.globalzp donut_block_buffer, donut_stream_ptr
 
 ; vwf_draw.s methods
 .global vwfStrWidth, vwfGlyphWidth, vwfPuts

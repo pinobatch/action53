@@ -12,41 +12,43 @@ ciDst: .res 2  ; Moved from unpb53.s as it's only used here.
   sta PPUCTRL
 
   lda TITLESCREEN+1
-  sta ciSrc+1
+  sta donut_stream_ptr+1
   lda TITLESCREEN+0
-  sta ciSrc
+  sta donut_stream_ptr+0
   
   ; Unpack tiles
   ldy #0
   sty PPUMASK
   sty PPUADDR
   sty PPUADDR
-  lda (ciSrc),y
+  lda (donut_stream_ptr),y
   tax
-  inc ciSrc
+  inc donut_stream_ptr+0
   bne :+
-    inc ciSrc+1
+    inc donut_stream_ptr+1
   :
-  jsr unpb53_block
+  jsr donut_block_x
 
   ; Unpack nametable
   lda #$20
   sta PPUADDR
   lda #$00
   sta PPUADDR
-  ldx #1024/16
-  jsr unpb53_block
+  ldx #1024/64
+  jsr donut_block_x
 
   ; fill in the palette
   ldx #$3F
   stx PPUADDR
-  sta PPUADDR
+  ldy #$00
+  sty PPUADDR
   lda nmis
   :
     cmp nmis
     beq :-
 palloop:
-  lda (ciSrc),y
+;  ldy #$00
+  lda (donut_stream_ptr),y
   sta PPUDATA
   iny
   cpy #16

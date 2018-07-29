@@ -6,6 +6,7 @@
 *.chr
 *.qdp
 *.pb53
+*.donut
 /obj/nes/*.s
 /zip.in
 *.nes.deb

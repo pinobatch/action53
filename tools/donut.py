@@ -199,6 +199,20 @@ def uncompress_block(cblock, prev_block=b'\x00'*64):
             plane_def = (plane_def << 1) & 0xff
     return bytes(block)
 
+# quick function for a53build.py
+def compress_multiple_blocks(data):
+    cdata = []
+    prev_block = None
+    for block in (data[i:i+64] for i in range(0, len(data), 64)):
+        if len(block) < 64:
+            page_padding = 64-len(block)
+            block = block + bytes(page_padding)
+        block = bytes(block)
+        cblock = compress_block(block, prev_block)
+        cdata.append(cblock)
+        prev_block = block
+    return (b''.join(cdata), len(cdata))
+
 class FileIterContextHack():
     def __init__(self, fn, mode, ask_file_overwrite=True):
         if fn == '-':

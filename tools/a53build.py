@@ -738,6 +738,8 @@ def bmptosb53(infilename, palette, max_tiles=256, trace=False):
     from PIL import Image
     import pilbmp2nes
     import chnutils
+    import donut
+    #TODO: rename sb53 with pb53 replaced with donut to something diffrent.
 
     im = Image.open(infilename)
     if im.size[0] > 256 or im.size[1] > 240:
@@ -772,10 +774,11 @@ def bmptosb53(infilename, palette, max_tiles=256, trace=False):
              for (t, b) in zip(attrs[0::2], attrs[1::2])]
     namdata.extend(b''.join(attrs))
 
+    compressed_tile_data = donut.compress_multiple_blocks(b''.join(chrdata))
     outdata = b''.join([
-        bytes([len(chrdata) & 0xFF]),
-        pb53(b''.join(chrdata), copyprev=False)[0],
-        pb53(namdata, copyprev=False)[0],
+        bytes([compressed_tile_data[1] & 0xFF]),
+        compressed_tile_data[0],
+        donut.compress_multiple_blocks(namdata)[0],
         palette
     ])
     if trace:
