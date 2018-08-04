@@ -5,6 +5,7 @@ import os
 from firstfit import ffd_add, slices_union, slices_find, slices_remove
 from innie import InnieParser
 from pb53 import pb53
+import donut
 import a53charset
 
 trace = True
@@ -738,7 +739,6 @@ def bmptosb53(infilename, palette, max_tiles=256, trace=False):
     from PIL import Image
     import pilbmp2nes
     import chnutils
-    import donut
     #TODO: rename sb53 with pb53 replaced with donut to something diffrent.
 
     im = Image.open(infilename)
@@ -880,7 +880,7 @@ second from (Address + Midpoint).
 
 """
     total_unco = sum(len(c) for c in chrbanks)
-    pb53banks = [pb53(c) for c in chrbanks]
+    pb53banks = [donut.compress_4096_segments(c) for c in chrbanks]
     del chrbanks
 
     # Insert the CHR banks

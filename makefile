@@ -22,7 +22,7 @@ cfgversion := page1
 objlist := \
   zapkernels vwf7 quadpcm vwf_draw \
   a53mapper main title cartmenu coredump donut identify \
-  unpb53 bcd pads mouse ppuclear paldetect \
+  unpb53 interbank_fetch bcd pads mouse ppuclear paldetect \
   pentlysound pentlymusic musicseq ntscPeriods
 
 AS65 = ca65

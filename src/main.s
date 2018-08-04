@@ -325,11 +325,20 @@ not_cnrom:
   ; ciSrc1: Address of second 4 KiB
   ; drawProgress: number of blocks already drawn
 loop:
+  lda draw_progress
+  lsr a
+  ror 0
+  lsr a
+  ror 0
+  sta PPUADDR
+  lda 0
+  and #$c0
+  sta PPUADDR
+
   lda ciSrc0
   sta 0
   lda ciSrc0+1
   sta 1
-  lda #0
   jsr do4
   adc ciSrc0
   sta ciSrc0
@@ -337,50 +346,33 @@ loop:
   inc ciSrc0+1
 :
 
+  lda draw_progress
+  lsr a
+  ror 0
+  lsr a
+  ror 0
+  eor #$10
+  sta PPUADDR
+  lda 0
+  and #$c0
+  sta PPUADDR
+
   lda ciSrc1
   sta 0
   lda ciSrc1+1
   sta 1
-  lda #64
   jsr do4
   adc ciSrc1
   sta ciSrc1
   bcc :+
   inc ciSrc1+1
 :
-  lda #0
-  sta 0
-  lda draw_progress
-  lsr a
-  ror 0
-  lsr a
-  ror 0
-  sta PPUADDR
-  ora #$10
-  sta 1
-  lda 0
-  sta PPUADDR
-  ldx #0
-copyloop0:
-  lda PB53_outbuf,x
-  sta PPUDATA
-  inx
-  cpx #64
-  bcc copyloop0
-  lda 1
-  sta PPUADDR
-  lda 0
-  sta PPUADDR
-copyloop1:
-  lda PB53_outbuf,x
-  sta PPUDATA
-  inx
-  cpx #128
-  bcc copyloop1
+
   inc draw_progress
   lda draw_progress
   cmp #64
   bcc loop
+
   dec num_chr_banks
   beq no_more_chr_banks
     clc
@@ -398,23 +390,18 @@ copyloop1:
 ; @param A start of buffer (0 or 64)
 ; @return A number of compressed bytes read
 do4:
-  sta ciBufStart
-  clc
-  adc #64
-  sta ciBufEnd
-  lda #72  ; 4 tiles, max 18 bytes per tile
+  lda #65  ; block of 4 tiles, max 64 + 1 bytes
   sta 4
   lda chrdir_entry
   sta chrdir_entry_zp
   lda chrdir_entry+1
   sta chrdir_entry_zp+1
   jsr interbank_fetch
-  lda #<interbank_fetch_buf
-  sta ciSrc
+  ldy #<interbank_fetch_buf
   lda #>interbank_fetch_buf
-  sta ciSrc+1
-  jsr unpb53_some
-  lda ciSrc
+  ldx #1
+  jsr donut_block_ayx
+  lda donut_stream_ptr+0
   sec
   sbc #<interbank_fetch_buf
   clc

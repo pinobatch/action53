@@ -199,7 +199,7 @@ def uncompress_block(cblock, prev_block=b'\x00'*64):
             plane_def = (plane_def << 1) & 0xff
     return bytes(block)
 
-# quick function for a53build.py
+# quick functions for a53build.py
 def compress_multiple_blocks(data):
     cdata = []
     prev_block = None
@@ -212,6 +212,21 @@ def compress_multiple_blocks(data):
         cdata.append(cblock)
         prev_block = block
     return (b''.join(cdata), len(cdata))
+
+def compress_4096_segments(data):
+    cdata_seg1 = []
+    cdata_seg2 = []
+    prev_block = None
+    for block_a, block_b in ((data[i:i+64], data[i+4096:i+4096+64]) for i in range(0, len(data)//2, 64)):
+        block = bytes(block_a)
+        cblock = compress_block(block, prev_block)
+        cdata_seg1.append(cblock)
+        prev_block = block
+        block = bytes(block_b)
+        cblock = compress_block(block, prev_block)
+        cdata_seg2.append(cblock)
+        prev_block = block
+    return (b''.join(cdata_seg1 + cdata_seg2), [len(b''.join(cdata_seg1))])
 
 class FileIterContextHack():
     def __init__(self, fn, mode, ask_file_overwrite=True):
