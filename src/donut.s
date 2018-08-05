@@ -9,10 +9,12 @@
 .export donut_decompress_block, donut_block_ayx, donut_block_x
 .exportzp donut_block_buffer
 .exportzp donut_stream_ptr
+.exportzp donut_block_count
 
 temp = $00  ; 16 bytes are used
 
 donut_block_buffer = $00c0  ; 64 bytes
+donut_block_count = temp+4
 
 .segment "ZEROPAGE"
 donut_stream_ptr:       .res 2
@@ -214,6 +216,7 @@ plane_buffer    = temp+8  ; 8 bytes
   end_block:
   jsr read_next_byte
   sty donut_stream_ptr+0
+  dec donut_block_count
 rts
 
 read_next_byte:
@@ -249,7 +252,6 @@ donut_decompress_block_table:
 .endproc
 .proc donut_block_x
 PPU_DATA = $2007
-donut_block_count = temp+4
   stx donut_block_count
   block_loop:
     jsr donut_decompress_block
@@ -259,7 +261,7 @@ donut_block_count = temp+4
       sta PPU_DATA
       inx
     bne upload_loop
-    dec donut_block_count
+    ldx donut_block_count
   bne block_loop
 rts
 .endproc

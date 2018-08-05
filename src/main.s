@@ -16,6 +16,8 @@
 .import coredump
 .importzp lineImgBufLen
 .exportzp psg_sfx_state
+;.export PB53_outbuf
+;.exportzp ciSrc, ciBufStart, ciBufEnd
 
 ; ld65 manual says LOWCODE is for stuff guaranteed not to be
 ; banked out, good for irq handlers, but it's also good for
@@ -35,6 +37,12 @@ cur_trigger: .res 1
 ; Used by music engine
 psg_sfx_state: .res 32
 tvSystem:   .res 1
+
+; Used by serial byte streams
+ciSrc: .res 2
+ciBufStart: .res 1
+ciBufEnd: .res 1
+PB53_outbuf = $0100
 
 .segment "BSS"
 linebuf: .res 40
@@ -227,9 +235,8 @@ titleptr = $00
   jmp start_game
 .endproc
 
-.importzp ciSrc, ciBufStart, ciBufEnd
 .importzp ciSrc0, ciSrc1
-.import unpb53_some, PB53_outbuf, interbank_fetch, interbank_fetch_buf
+.import interbank_fetch, interbank_fetch_buf
 
 ; Temporary measure during debugging to keep Sinking Feeling-only ROM
 ; from reading off the end.  Once this is working, I'll try adding

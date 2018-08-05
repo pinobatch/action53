@@ -1472,21 +1472,38 @@ ibflen = $04
   lda desc_data_ptr+1
   sta ibfsrc+1
   ; Pointer to bank number already in $02-$03
-  lda #108  ; including 12.5% overhead for run-free tiles
+  lda #65+38  ; 38 is the maximum size for a donut block with 2 blank tiles.
   sta ibflen
   jsr interbank_fetch
-  
+
   lda #<interbank_fetch_buf
-  sta ciSrc
+  sta donut_stream_ptr+0
   lda #>interbank_fetch_buf
-  sta ciSrc+1
-  lda #96  ; planes in order 0, 1, 0, 1, 0, 1, 0, 1, 2, 2, 2, 2
-  sta ciBufEnd
-  lda #0
-  sta ciBufStart
-  jsr unpb53_some
+  sta donut_stream_ptr+1
+  ; FIXME: this is a stupid kludge.
+  ; There should be far less copying of bytes then what's going on here.
+  ; planes in order
+  ; 0, 1, 0, 1, 0, 1, 0, 1,
+  jsr donut_decompress_block
+  ldx #0
+  copy_buffer_loop:
+    lda donut_block_buffer, x
+    sta PB53_outbuf, x
+    inx
+    cpx #64
+  bcc copy_buffer_loop
+  ; 2, 2, 2, 2, -, -, -, -,
+  jsr donut_decompress_block
+  ldx #0
+  copy_half_buffer_loop:
+    lda donut_block_buffer, x
+    sta PB53_outbuf+64, x
+    inx
+    cpx #32
+  bcc copy_half_buffer_loop
+
   sec
-  lda ciSrc
+  lda donut_stream_ptr+0
   sbc #<interbank_fetch_buf
   clc
   adc desc_data_ptr

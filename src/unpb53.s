@@ -9,12 +9,8 @@
 ;
 .export unpb53_some, PB53_outbuf
 .export unpb53_block_ay, unpb53_block
-.exportzp ciSrc, ciBufStart, ciBufEnd
+.importzp ciSrc, ciBufStart, ciBufEnd
 
-.segment "ZEROPAGE"
-ciSrc: .res 2
-ciBufStart: .res 1
-ciBufEnd: .res 1
 PB53_outbuf = $0100
 
 ; the decompressor is less than 176 bytes, useful for loading into
