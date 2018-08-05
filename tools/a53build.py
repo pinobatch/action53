@@ -819,10 +819,9 @@ screenshot_ids is a list of one index into screenshots for each title
         except KeyError:
             headerdata, tiledata = load_screenshot(filename)
             scrid = len(screenshots)
-            # hack: add padding, and manage xor_prev_block flag for donut :(
-            packet_list = [tiledata[i:i+96]+bytes(32) for i in range(0, len(tiledata), 96)]
-            cpackets = (donut.compress_multiple_blocks(i) for i in packet_list)
-            ctiledata = b''.join(cdata for cdata, num_of_blocks in cpackets)
+            # hack: add padding to blocks for donut :(
+            tiledata = b''.join(tiledata[i:i+96]+bytes(32) for i in range(0, len(tiledata), 96))
+            ctiledata, number_of_blocks = donut.compress_multiple_blocks(tiledata)
             screenshots.append(headerdata+ctiledata)
             screenshots_by_name[filename] = scrid
         screenshot_ids.append(scrid)
