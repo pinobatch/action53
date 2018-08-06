@@ -51,12 +51,10 @@ temp_y          = temp+5
 block_offset    = temp+6
 loop_counter    = temp+7
 plane_buffer    = temp+8  ; 8 bytes
-  ldy donut_stream_ptr+0
-  lda #$00
-  sta donut_stream_ptr+0
-  sta block_offset
+  ldy #$00
+  sty block_offset
   lda (donut_stream_ptr), y
-    ; read_next_byte is pre-increment
+    ; Reading a byte from the stream pointer will be pre-increment
     ; So save last increment until routine is done
 
   cmp #$c0
@@ -66,7 +64,8 @@ plane_buffer    = temp+8  ; 8 bytes
     bne no_raw_block
       ldx #64-1
       raw_block_loop:
-        jsr read_next_byte
+        iny
+        lda (donut_stream_ptr), y
         sta donut_block_buffer, x
         dex
       bpl raw_block_loop
@@ -99,7 +98,8 @@ plane_buffer    = temp+8  ; 8 bytes
     tax
     lda donut_decompress_block_table, x
     bne read_plane_def_from_stream
-      jsr read_next_byte
+      iny
+      lda (donut_stream_ptr), y
     read_plane_def_from_stream:
     sta plane_def
 
@@ -113,7 +113,8 @@ plane_buffer    = temp+8  ; 8 bytes
         ; don't yet shift out plane_def, we'll use the
         ; bit again to select the cheaper buffer copy later
       bpl pb8_is_all_zero
-        jsr read_next_byte
+        iny
+        lda (donut_stream_ptr), y
       pb8_is_all_zero:
       sta pb8_ctrl
 
@@ -127,7 +128,8 @@ plane_buffer    = temp+8  ; 8 bytes
       pb8_loop:
         asl pb8_ctrl
         bcc pb8_use_prev
-          jsr read_next_byte
+          iny
+          lda (donut_stream_ptr), y
         pb8_use_prev:
         sta plane_buffer, x
         dex
@@ -214,17 +216,14 @@ plane_buffer    = temp+8  ; 8 bytes
       inc loop_counter
     bne plane_loop
   end_block:
-  jsr read_next_byte
-  sty donut_stream_ptr+0
-  dec donut_block_count
-rts
-
-read_next_byte:
-  iny
-  bne no_inc_high_byte_2
+  sec  ;,; iny   clc
+  tya
+  adc donut_stream_ptr+0
+  sta donut_stream_ptr+0
+  bcc add_stream_ptr_no_inc_high_byte
     inc donut_stream_ptr+1
-  no_inc_high_byte_2:
-  lda (donut_stream_ptr), y
+  add_stream_ptr_no_inc_high_byte:
+  dec donut_block_count
 rts
 
 write_byte_to_block_buffers:
