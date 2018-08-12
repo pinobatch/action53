@@ -14,14 +14,14 @@ As of the 2018 version of _Action 53_, used for volumes 3 and 4, the
 key block begins 256 bytes from the end of the ROM, at offset $7F00
 in the last 32 KiB bank.  Because the NES maps ROM to $8000-$FFFF,
 it appears at $FF00 in address space.  A ROM image in iNES format (or
-its offshoot NES 2.0) carries a 16-byte NES 2.0 header before, and
-the key block for a 512 KiB collection in iNES format is at file
-offset $07FF10.
+its offshoot NES 2.0) carries a 16-byte NES 2.0 header before the
+ROM, and the key block for a 512 KiB collection in iNES format is
+thus at file offset $07FF10.
 
 All CPU addresses in the key block and elsewhere are little-endian,
 meaning bits 7-0 come before bits 15-8, and they have bit 15 set to
-true ($8000-$FFFF not $0000-$7FFF).  Thus an offset of $1234 in a
-bank is stored as `3F 92`.  All addresses in the key block refer to
+true ($8000-$FFFF not $0000-$7FFF).  Thus an offset of $4321 in a
+bank is stored as `21 C3`.  All addresses in the key block refer to
 the last bank of the ROM unless stated otherwise.
 
 * $FF00: Address of ROM directory
@@ -35,6 +35,7 @@ the last bank of the ROM unless stated otherwise.
 * $FF0F: Unused
 * $FF10: Address of compressed title screen
 * $FF12: Address of title strings
+* $FF14: Address of replacement table for DTE decompression
 
 ROM directory
 -------------
@@ -148,11 +149,19 @@ Descriptions
 ------------
 Each activity's description is up to 16 lines of up to 128 pixels.
 As with title and author, $0A separates lines, and $00 ends the
-description.
-
-Addresses of descriptions are calculated the same way as title
-addresses, except that the description block can be stored
+description.  Addresses of descriptions are calculated the same way
+as title addresses, except that the description block can be stored
 in a PRG bank other than the last.
+
+Unlike title and author, descriptions may be compressed using digram
+tree encoding (DTE) using a replacement table of up to 256 bytes.
+Decompression replaces each byte of compressed text from $80 through
+$FF with the corresponding pair of bytes in the replacement table.
+The "tree" in DTE means that the replacement table is recursive:
+entries refer to literal code units or to previous entries.
+(If `DTE_MIN_CODEUNIT` exceeds 128, decompression ignores the first
+`DTE_MIN_CODEUNIT - 128` entries of the table and instead copies
+DTE bytes from $80 through `DTE_MIN_CODEUNIT - 1` literally.)
 
 Title screen
 -------------
@@ -195,6 +204,6 @@ This can also be interpreted as a bit field:
 
     7654 3210
     |||+-++++- Y position
-    ||+------- Value of plane not containing text
+    ||+------- Value of plane not containing text. 0: $00; 1: $FF
     |+-------- 1: Invert plane containing text
-    +--------- Bit plane. 0: bit 0; 1: bit 1
+    +--------- Bit plane containing text. 0: bit 0; 1: bit 1
