@@ -280,8 +280,6 @@ COLOR3ON1 = $A0
 COLOR0ON2 = $C0
 COLOR1ON3 = $E0
 
-TITLESTRINGS = $FF12
-
 ; Error if no games are added ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .code
 .proc no_games_error

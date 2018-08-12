@@ -1362,25 +1362,37 @@ continue_description:
   jsr interbank_fetch
   lda interbank_fetch_buf+0
   bne not_eot
-  lda num_lines_on_page
-  cmp #MAX_LINES
-  bcc line_done
-  lda draw_progress
-  sta num_lines_on_page
-  jmp line_done
-not_eot:
+    ; End of text: Draw blank lines until finished
+    lda num_lines_on_page
+    cmp #MAX_LINES
+    bcc line_done
+    lda draw_progress
+    sta num_lines_on_page
+    jmp line_done
+  not_eot:
+
+  ; Decompress using DTE
+
   lda #>interbank_fetch_buf
   ldy #<interbank_fetch_buf
-  ldx #0
-  jsr vwfPuts
+  jsr undte_line
+  ; A is size of DTE including line/text terminator; Y is length of
+  ; decompressed string which we don't need.
+  tay
+  dey
+  lda interbank_fetch_buf,y
+  cmp #$01  ; Carry 0: null; 1: newline
   tya
-  sec
-  sbc #<interbank_fetch_buf
-  clc
   adc desc_data_ptr
   sta desc_data_ptr
-  bcc line_done
-  inc desc_data_ptr+1
+  bcc :+
+    inc desc_data_ptr+1
+  :
+
+  ldx #0
+  lda #>dte_output_buf
+  ldy #<dte_output_buf
+  jsr vwfPuts
   jmp line_done
 .endproc
 

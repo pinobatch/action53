@@ -58,10 +58,17 @@ start_mappercfg  = $02  ; Mapper configuration byte for this activity
 ; unpb8.s methods
 .global unpb53_some, unpb53_block_ay, unpb53_block, interbank_fetch
 
+; undte.s constants
+DTE_OUTPUT_LEN = 64
+; undte.s fields
+dte_output_buf = interbank_fetch_buf + 128
+; undte.s methods
+.global undte_line, undte_line0
+
 ; vwf_draw.s methods
 .global vwfStrWidth, vwfGlyphWidth, vwfPuts
 .global clearLineImg, copyLineImg, invertTiles
-.globalzp lineImgBufLen
+.globalzp lineImgBufLen, FIRST_PRINTABLE_CU
 
 ; zapkernels.s methods
 .global zapkernel_yonoff_ntsc
@@ -78,16 +85,16 @@ DETECT_1P_MOUSE = $01
 .global quadpcm_test
 
 ; Directories
-CHRDIR_START   = $FF02
-SCREENSLIST    = $FF04
-TITLELIST      = $FF06
-PAGELIST       = $FF08
-NAMESLIST      = $FF0A
-DESCSLIST      = $FF0C
-DESCSBANK      = $FF0E
-TITLESTRCLEAR  = $FF0F  ; $00 for 0/1 and 0/2; $FF for 2/3 and 1/3
-TITLESCREEN    = $FF10
-;TITLESTRINGS = $FF12
+CHRDIR_START     = $FF02
+SCREENSLIST      = $FF04
+TITLELIST        = $FF06
+PAGELIST         = $FF08
+NAMESLIST        = $FF0A
+DESCSLIST        = $FF0C
+DESCSBANK        = $FF0E
+TITLESCREEN      = $FF10
+TITLESTRINGS     = $FF12
+DTE_REPLACEMENTS = $FF14
 
 TITLE_PRG_BANK    = $00
 TITLE_CHR_BANK    = $01
