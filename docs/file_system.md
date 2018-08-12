@@ -13,10 +13,10 @@ computer storage device's file system.
 As of the 2018 version of _Action 53_, used for volumes 3 and 4, the
 key block begins 256 bytes from the end of the ROM, at offset $7F00
 in the last 32 KiB bank.  Because the NES maps ROM to $8000-$FFFF,
-it appears at $FF00 in address space.  A ROM image in iNES format (or
-its offshoot NES 2.0) carries a 16-byte NES 2.0 header before the
-ROM, and the key block for a 512 KiB collection in iNES format is
-thus at file offset $07FF10.
+it appears at $FF00 in CPU address space.  A ROM image in iNES format
+(or its offshoot NES 2.0) carries a 16-byte NES 2.0 header before the
+ROM data, and the key block for a 512 KiB collection in iNES format
+is thus at file offset $07FF10.
 
 All CPU addresses in the key block and elsewhere are little-endian,
 meaning bits 7-0 come before bits 15-8, and they have bit 15 set to
@@ -49,6 +49,8 @@ Records in the following format describe each ROM in a collection:
 * Variable: An unpatch record for each 32768-byte PRG bank.
 * 0-4 bytes: The CHR directory index for each CHR ROM bank, if any.
 
+A PRG ROM size of 0 ends the ROM directory.
+
 Unpatch records contain the data that the exit patch overwrote in
 each PRG ROM bank.
 
@@ -62,7 +64,8 @@ length is less than 128, it consists of that many literal bytes.
 Otherwise, a single byte is stored, and the exit patch consists
 of _n_ minus 128 repetitions of a single byte.
 
-A PRG ROM size of 0 ends the ROM directory.
+Unpatch data for CHR ROM, screenshots, and the description block
+is treated as solid $FF.
 
 CHR directory
 -------------
@@ -82,7 +85,20 @@ The screenshot directory:
 * 1 byte: PRG bank holding compressed data
 * 2 bytes: Address of screenshot
 
-Format of screenshot (`a53screenshot.form_screenshot`): To be written
+Each screenshot converted with `form_screenshot()` in
+`a53screenshot.py` consists of a 13-byte header followed by
+a block of PB53 compressed tile data.
+
+* 3 bytes: Colors used for color set 0
+* 3 bytes: Colors used for color set 1
+* 7 bytes: 64x56-bit bitmap of which color set each tile uses
+
+Tiles have 3 bits per pixel and are stored in 14 groups of four
+tiles, each of which decompresses to 96 bytes.  Each group consists
+of planes 0 and 1 for four tiles (64 bytes) followed by plane 2 for
+all four tiles (32 bytes).  A 0 in plane 2 means this pixel is gray
+(0, 1, 2, or 3 meaning black, dark gray, light gray, or white);
+1 means it uses a color from the tile's color set.
 
 Activities
 ----------
@@ -136,14 +152,13 @@ is an ASCII superset defined by `a53charset.py`.
 Activity names
 --------------
 Each activity's name consists of a title, a newline ($0A), the name
-of the author, and a NUL terminator ($00).  
+of the author, and a NUL terminator ($00).  To find the address of an
+activity name, add the offset in the activity directory to the start
+address of the activity names block.
 
 The title can be up to 128 pixels long as defined in `vwf7.png`.
 Because the year of first publication is drawn before the author's
 name, it can be only 101 pixels long.
-
-To find the address of an activity name, add the offset in the
-activity directory to the start address of the activity names block.
 
 Descriptions
 ------------
@@ -207,3 +222,14 @@ This can also be interpreted as a bit field:
     ||+------- Value of plane not containing text. 0: $00; 1: $FF
     |+-------- 1: Invert plane containing text
     +--------- Bit plane containing text. 0: bit 0; 1: bit 1
+
+Credits
+-------
+This document is under the same license as the Action 53 builder:
+
+Copyright 2018 Damian Yerrick
+
+Copying and distribution of this file, with or without
+modification, are permitted in any medium without royalty provided
+the copyright notice and this notice are preserved in all source
+code copies.  This file is offered as-is, without any warranty.
