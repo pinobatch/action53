@@ -69,6 +69,10 @@ is treated as solid $FF.
 
 CHR directory
 -------------
+To be rewritten after interleave for Donut is rethought.
+
+*The following refers to a previous version*
+
 Each 8192-byte CHR ROM bank consists of two 4096-byte half banks
 compressed with PB53.  They are decoded in parallel because many
 games, especially those by Shiru, have many identical tiles across
@@ -87,18 +91,19 @@ The screenshot directory:
 
 Each screenshot converted with `form_screenshot()` in
 `a53screenshot.py` consists of a 13-byte header followed by
-a block of PB53 compressed tile data.
+a block of Donut compressed tile data.
 
 * 3 bytes: Colors used for color set 0
 * 3 bytes: Colors used for color set 1
 * 7 bytes: 64x56-bit bitmap of which color set each tile uses
 
 Tiles have 3 bits per pixel and are stored in 14 groups of four
-tiles, each of which decompresses to 96 bytes.  Each group consists
-of planes 0 and 1 for four tiles (64 bytes) followed by plane 2 for
-all four tiles (32 bytes).  A 0 in plane 2 means this pixel is gray
-(0, 1, 2, or 3 meaning black, dark gray, light gray, or white);
-1 means it uses a color from the tile's color set.
+tiles, each of which decompresses to 128 bytes (two Donut blocks).
+Each group consists of planes 0 and 1 for four tiles (64 bytes)
+followed by plane 2 for all four tiles (32 bytes) and 32 zero bytes.
+A 0 in plane 2 means this pixel is gray (0, 1, 2, or 3 meaning black,
+dark gray, light gray, or white); 1 means it uses a color from the
+tile's color set.
 
 Activities
 ----------
@@ -156,9 +161,9 @@ of the author, and a NUL terminator ($00).  To find the address of an
 activity name, add the offset in the activity directory to the start
 address of the activity names block.
 
-The title can be up to 128 pixels long as defined in `vwf7.png`.
-Because the year of first publication is drawn before the author's
-name, it can be only 101 pixels long.
+The title can be up to 128 pixels long as defined in `vwf7.png`,
+or about 28 characters.  Because the year of first publication
+precedes the author's name, it can be only 101 pixels long.
 
 Descriptions
 ------------
@@ -180,12 +185,12 @@ DTE bytes from $80 through `DTE_MIN_CODEUNIT - 1` literally.)
 
 Title screen
 -------------
-This is the "sb53" format also used in the NES port of
-240p Test Suite.
+This is similar to the "sb53" format also used in the NES port of
+240p Test Suite, except that PB53 is replaced with Donut.
 
 * 1 byte: Number of distinct tiles, with $00 meaning 256
-* Variable: PB53 compressed tile data
-* Variable: PB53 compressed nametable; decompresses to 960
+* Variable: Donut compressed tile data
+* Variable: Donut compressed nametable; decompresses to 960
   bytes of tilemap and 64 bytes of color attributes
 * 16 bytes: Palette
 
