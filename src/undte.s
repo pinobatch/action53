@@ -6,7 +6,7 @@
 ; Code units 136-255 map to pairs of code units.  The second
 ; is added to a stack, and the first is interpreted as above.
 
-DTE_MIN_CODEUNIT = 136
+DTE_MIN_CODEUNIT = 128+13
 
 .code
 .proc undte_line

@@ -14,7 +14,7 @@ default_screenshot_filename = '../tilesets/screenshots/default.png'
 default_title_screen = '../tilesets/title_screen.png'
 default_title_palette = bytes.fromhex('0f0010200f1626200f1A2A200f122220')
 default_menu_prg = '../a53menu.prg'
-DTE_MIN_CODEUNIT = 136
+DTE_MIN_CODEUNIT = 128+13
 
 # Parsing the config file ###########################################
 
