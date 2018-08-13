@@ -5,15 +5,21 @@
 ; modification, are permitted in any medium without royalty provided
 ; the copyright notice and this notice are preserved in all source
 ; code copies.  This file is offered as-is, without any warranty.
+;
+; Version History:
+; 2018-08-13: Changed the format of raw blocks to not be reversed.
+;             Register X is now an argument for the buffer offset.
+; 2018-04-30: Initial release.
+;
 
 .export donut_decompress_block, donut_block_ayx, donut_block_x
-.exportzp donut_block_buffer
+.export donut_block_buffer
 .exportzp donut_stream_ptr
 .exportzp donut_block_count
 
 temp = $00  ; 16 bytes are used
 
-donut_block_buffer = $00c0  ; 64 bytes
+donut_block_buffer = $0100  ; 64 bytes
 donut_block_count = temp+4
 
 .segment "ZEROPAGE"
@@ -38,8 +44,6 @@ donut_stream_ptr:       .res 2
 
 .segment "CODE"
 
-.align 256
-
 .proc donut_decompress_block
 block_header    = temp+0
 plane_def       = temp+1
@@ -51,8 +55,8 @@ temp_y          = temp+5
 block_offset    = temp+6
 loop_counter    = temp+7
 plane_buffer    = temp+8  ; 8 bytes
+  stx block_offset
   ldy #$00
-  sty block_offset
   lda (donut_stream_ptr), y
     ; Reading a byte from the stream pointer will be pre-increment
     ; So save last increment until routine is done
@@ -62,14 +66,19 @@ plane_buffer    = temp+8  ; 8 bytes
   do_special_block:
     and #$01
     bne no_raw_block
-      ldx #64-1
+      ;,; ldx block_offset
       raw_block_loop:
         iny
         lda (donut_stream_ptr), y
         sta donut_block_buffer, x
-        dex
-      bpl raw_block_loop
+        inx
+        cpy #65-1  ; size of a raw block, minus pre-increment
+      bcc raw_block_loop
     no_raw_block:
+    ;,; sec
+    lda block_offset  ; add 64 to X even if it's a skip block
+    adc #64-1
+    tax
   jmp end_block
   do_normal_block:
     sta block_header
@@ -82,15 +91,20 @@ plane_buffer    = temp+8  ; 8 bytes
     and #$04
     beq no_clear_block_buffer
         ; semi-unrolled for speed, as the block buffer is often cleared
-      ldx #(64/4)-1
-      lda #$00
+      tya  ;,; lda #$00
+      ldy #(64/4)
+      ; It's fine to count down to zero with Y, Because Y
+      ; was certain to be $00 anyway due to the pre-increment setup.
       clear_block_loop:
         sta donut_block_buffer, x
         sta donut_block_buffer+16, x
         sta donut_block_buffer+32, x
         sta donut_block_buffer+48, x
-        dex
-      bpl clear_block_loop
+        inx
+        dey
+      bne clear_block_loop
+      ;,; ldy #$00
+      ; no need to restore X now as it was already saved to block_offset
     no_clear_block_buffer:
 
     lda block_header
@@ -215,6 +229,7 @@ plane_buffer    = temp+8  ; 8 bytes
         ; Restore Y as input pointer
       inc loop_counter
     bne plane_loop
+    ldx block_offset
   end_block:
   sec  ;,; iny   clc
   tya
@@ -253,13 +268,14 @@ donut_decompress_block_table:
 PPU_DATA = $2007
   stx donut_block_count
   block_loop:
+    ldx #64
     jsr donut_decompress_block
-    ldx #$100-64
+    ldx #64
     upload_loop:
-      lda donut_block_buffer-$100+64, x
+      lda donut_block_buffer, x
       sta PPU_DATA
       inx
-    bne upload_loop
+    bpl upload_loop
     ldx donut_block_count
   bne block_loop
 rts

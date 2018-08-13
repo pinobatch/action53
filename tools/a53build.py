@@ -821,7 +821,7 @@ screenshot_ids is a list of one index into screenshots for each title
             scrid = len(screenshots)
             # hack: add padding to blocks for donut :(
             tiledata = b''.join(tiledata[i:i+96]+bytes(32) for i in range(0, len(tiledata), 96))
-            ctiledata, number_of_blocks = donut.compress_multiple_blocks(tiledata)
+            ctiledata, number_of_blocks = donut.compress_multiple_blocks(tiledata, use_prev_block=False)
             screenshots.append(headerdata+ctiledata)
             screenshots_by_name[filename] = scrid
         screenshot_ids.append(scrid)

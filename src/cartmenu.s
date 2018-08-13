@@ -1480,28 +1480,11 @@ ibflen = $04
   sta donut_stream_ptr+0
   lda #>interbank_fetch_buf
   sta donut_stream_ptr+1
-  ; FIXME: this is a stupid kludge.
-  ; There should be far less copying of bytes then what's going on here.
-  ; planes in order
-  ; 0, 1, 0, 1, 0, 1, 0, 1,
-  jsr donut_decompress_block
+  ; planes in order 0, 1, 0, 1, 0, 1, 0, 1, 2, 2, 2, 2, -, -, -, -
   ldx #0
-  copy_buffer_loop:
-    lda donut_block_buffer, x
-    sta PB53_outbuf, x
-    inx
-    cpx #64
-  bcc copy_buffer_loop
-  ; 2, 2, 2, 2, -, -, -, -,
   jsr donut_decompress_block
-  ldx #0
-  copy_half_buffer_loop:
-    lda donut_block_buffer, x
-    sta PB53_outbuf+64, x
-    inx
-    cpx #32
-  bcc copy_half_buffer_loop
-
+  ;,; ldx #64
+  jsr donut_decompress_block
   sec
   lda donut_stream_ptr+0
   sbc #<interbank_fetch_buf

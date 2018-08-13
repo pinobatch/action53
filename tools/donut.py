@@ -15,6 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# Version History:
+# 2018-08-13: Changed the format of raw blocks to not be reversed.
+# 2018-04-30: Initial release.
+
 import os
 import sys
 import itertools
@@ -114,7 +118,7 @@ def compress_block(input_block, prev_block=None, use_bit_flip=True):
         if len(prev_block) < 64:
             raise ValueError("input previous block is less then 64 bytes.")
         xor_block = bytes( input_block[i] ^ prev_block[i] for i in range(64) )
-    cblock_choices = [b'\xfe' + input_block[::-1]]
+    cblock_choices = [b'\xfe' + input_block]
     for attempt_type in range(0, 0xc0, 4):
         if not use_bit_flip and attempt_type & 0x08:
             continue
@@ -168,7 +172,7 @@ def uncompress_block(cblock, prev_block=b'\x00'*64):
     block = bytearray(prev_block)
     if block_header >= 0xc0:
         if block_header & 0x01 == 0:
-            for i in range(63,-1,-1):
+            for i in range(64):
                 block[i] = next(cblock_iter)
     else:
         if block_header & 0x04:
@@ -200,7 +204,7 @@ def uncompress_block(cblock, prev_block=b'\x00'*64):
     return bytes(block)
 
 # quick functions for a53build.py
-def compress_multiple_blocks(data):
+def compress_multiple_blocks(data, use_prev_block=True):
     cdata = []
     prev_block = None
     for block in (data[i:i+64] for i in range(0, len(data), 64)):
@@ -210,7 +214,8 @@ def compress_multiple_blocks(data):
         block = bytes(block)
         cblock = compress_block(block, prev_block)
         cdata.append(cblock)
-        prev_block = block
+        if use_prev_block:
+            prev_block = block
     return (b''.join(cdata), len(cdata))
 
 def compress_4096_segments(data):
@@ -342,7 +347,7 @@ def main(argv=None):
     import time
 
     parser = argparse.ArgumentParser(description='Donut NES Codec', usage='%(prog)s [options] [-d] input [-o] output')
-    parser.add_argument('--version', action='version', version='%(prog)s 1.0')
+    parser.add_argument('--version', action='version', version='%(prog)s 1.2')
     parser.add_argument('input', metavar='files', help='Input files', nargs='*')
     parser.add_argument('-d', '--decompress', help='decompress the input files', action='store_true')
     parser.add_argument('-o', '--output', metavar='FILE', help='output to FILE instead of last positional argument')
