@@ -7,6 +7,7 @@ from innie import InnieParser
 from pb53 import pb53
 import donut
 import a53charset
+from dte import dte_compress
 
 trace = True
 trace_parser = False
@@ -14,6 +15,7 @@ default_screenshot_filename = '../tilesets/screenshots/default.png'
 default_title_screen = '../tilesets/title_screen.png'
 default_title_palette = bytes.fromhex('0f0010200f1626200f1A2A200f122220')
 default_menu_prg = '../a53menu.prg'
+DTE_MIN_CODEUNIT = 128+13
 
 # Parsing the config file ###########################################
 
@@ -1078,7 +1080,7 @@ the name block, and the description block.
 
     titledir = bytearray()
     name_block = bytearray()
-    desc_block = bytearray()
+    descriptions = []
     for (i, title) in enumerate(titles):
         try:
             reset = title['entrypoint']
@@ -1093,13 +1095,11 @@ the name block, and the description block.
                   file=sys.stderr)
             raise
         name_offset = len(name_block)
-        desc_offset = len(desc_block)
         name_block.extend(title_name.encode('action53'))
         name_block.append(10)  # newline
         name_block.extend(author_name.encode('action53'))
         name_block.append(0)
-        desc_block.extend(description.encode('action53'))
-        desc_block.append(0)
+        descriptions.append(description.encode('action53'))
 
         # UNROM needs prgstart to be set at the LAST bank of
         # each title
@@ -1107,22 +1107,41 @@ the name block, and the description block.
         if (mapmode & 0x0C) == 0x0C and (mapmode & 0x30) > 1:
             banksizemask = (1 << ((mapmode & 0x30) >> 4)) - 1
             prgstart = prgstart | banksizemask
-            print("UNROM detected in %s:\n"
-                  "applying bank size adjustment $%02x forming prgstart $%02x"
-                  % (title['title'], banksizemask, prgstart))
-            #raise NotImplementedError
-        
+##            print("UNROM detected in %s:\n"
+##                  "applying bank size adjustment $%02x forming prgstart $%02x"
+##                  % (title['title'], banksizemask, prgstart))
+##            raise NotImplementedError
+
         titledir_data = [
             prgstart, chr_starts[i], screenshot_ids[i], year,
             int(players), 0, 0, 0,
             name_offset & 0xFF, name_offset >> 8,
-            desc_offset & 0xFF, desc_offset >> 8,
+            0, 0,  # reserved for description data
             reset & 0xFF, reset >> 8,
             mapmode, 0
         ]
         titledir.extend(titledir_data)
 
-    return titledir, name_block, desc_block
+    # TODO: Compress descriptions with DTE
+    if trace:
+        print("Compressing descriptions with DTE")
+        olddescsize = len(descriptions) + sum(len(x) for x in descriptions)
+    descriptions, replacements, _ = dte_compress(
+        descriptions, mincodeunit=DTE_MIN_CODEUNIT
+    )
+
+    desc_block = bytearray()
+    for i, d in enumerate(descriptions):
+        desc_offset = len(desc_block)
+        titledir[i * 16 + 10] = desc_offset & 0xFF
+        titledir[i * 16 + 11] = desc_offset >> 8
+        desc_block.extend(d)
+        desc_block.append(0)  # NUL terminator
+    if trace:
+        print("Descriptions compressed from %d bytes to %d bytes"
+              % (olddescsize, len(desc_block)))
+
+    return titledir, name_block, desc_block, b''.join(replacements)
 
 def make_pagedir(pages):
     pageoffsets = bytearray()
@@ -1258,7 +1277,7 @@ def main(argv=None):
     (scrdir, screenshot_ids) = insert_screenshots(titles, prgbanks, cfgfilename)
 
     # Create the title directory
-    (titledir, name_block, desc_block) \
+    (titledir, name_block, desc_block, dte_replacements) \
                = make_title_directory(titles, roms_by_name,
                                       prg_starts, chr_starts, screenshot_ids)
     pagedir_sz = sum(len(p[0]) for p in pages) + 2 * len(pages) + 1
@@ -1272,9 +1291,8 @@ def main(argv=None):
     ))
     if trace:
         print("Main bank directories already inserted total %d bytes.\n"
-              "Those not yet inserted total %d bytes, compared to estimate of %d.\n"
-              "Descriptions total %d."
-              % (dirs_len1, dirs_len2, est_dirs_len, len(desc_block)))
+              "Those not yet inserted total %d bytes, compared to estimate of %d."
+              % (dirs_len1, dirs_len2, est_dirs_len))
     if dirs_len2 + dirs_len1 > 0x3FF0:
         raise ValueError("internal error: directory size of %d bytes exceed 16 KiB"
                          % (dirs_len2 + dirs_len1))
@@ -1290,14 +1308,17 @@ def main(argv=None):
     chrdir_addr = ffd_add(final_banks, chrdir)
     pagedir_addr = ffd_add(final_banks, pagedir)
     title_screen_addr = ffd_add(final_banks, title_screen_sb53)
+    dte_replacements_addr = ffd_add(final_banks, dte_replacements)
     if trace:
         print("Remaining space in last bank:",
               ', '.join("%04x-%04x" % (s, e - 1)
                         for s, e in final_banks[0][1]))
 
     title_strings_addr = ffd_add(final_banks, title_lines_data)
-    print("title strings addr is", title_strings_addr)
-    title_strings_invert = 0x00
+
+    # Preadjust DTE table for indexing using Y register equal to
+    # (codeunit - 128) * 2 and (codeunit - 128) * 2 + 1
+    preadj_dte_addr = dte_replacements_addr[1] - (DTE_MIN_CODEUNIT - 128) * 2
 
     # And finally make the key block at FF00
     # Format:
@@ -1306,6 +1327,7 @@ def main(argv=None):
     # 08 page dir address, name block address
     # 0C desc block address, desc block bank, unused,
     # 10 title screen address, 12 title strings address
+    # 14 DTE unused
     keyblock = bytes([
         romdir_addr[1] & 0xFF, romdir_addr[1] >> 8,
         chrdir_addr[1] & 0xFF, chrdir_addr[1] >> 8,
@@ -1317,8 +1339,10 @@ def main(argv=None):
         desc_block_addr[0], 0xFF,
         title_screen_addr[1] & 0xFF, title_screen_addr[1] >> 8,
         title_strings_addr[1] & 0xFF, title_strings_addr[1] >> 8,
+        preadj_dte_addr & 0xFF, preadj_dte_addr >> 8,
     ])
     if trace:
+        print("DTE table at $%04x" % preadj_dte_addr)
         print("descriptions in bank %d byte $%04x" % desc_block_addr)
         print("romdir at $%04x-$%04x, titledir at $%04x-$%04x"
               % (romdir_addr[1], romdir_addr[1] + len(romdir) - 1,

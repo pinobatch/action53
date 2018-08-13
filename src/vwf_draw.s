@@ -18,12 +18,13 @@
 .export vwfPutTile, vwfPuts, vwfPuts0
 .export vwfGlyphWidth, vwfStrWidth, vwfStrWidth0
 .export clearLineImg, lineImgBuf, invertTiles, copyLineImg
-.exportzp lineImgBufLen
+.exportzp lineImgBufLen, FIRST_PRINTABLE_CU
 .import vwfChrData, vwfChrWidths
 
 lineImgBuf = $0100
 lineImgBufLen = 128
 FONT_HT = 8
+FIRST_PRINTABLE_CU = $20
 
 srcStr = $00
 horzPos = $04
@@ -51,7 +52,7 @@ rightMask = $0B
 
 .macro getTileAddr
   sec
-  sbc #' '
+  sbc #FIRST_PRINTABLE_CU
   ; Find source address
   asl a     ; 7 6543 210-
   adc #$80  ; 6 -543 2107
@@ -169,7 +170,7 @@ loop:
   lda (str),y
   beq bail
   tax
-  lda vwfChrWidths-32,x
+  lda vwfChrWidths-FIRST_PRINTABLE_CU,x
   clc
   adc width
   sta width
@@ -184,11 +185,11 @@ bail:
 ;;
 ; Finds both the pen-advance of a glyph and the
 ; columns actually occupied by opaque pixels.
-; in: A = character number (32-127)
+; in: A = character number (FIRST_PRINTABLE_CU or greater)
 ; out: A = columns containing a bit; X: pen-advance in pixels
 .proc vwfGlyphWidth
   tay
-  ldx vwfChrWidths-32,y
+  ldx vwfChrWidths-FIRST_PRINTABLE_CU,y
   getTileAddr
   ldy #7
   lda #0
@@ -217,20 +218,23 @@ loop:
   ldy #0
   lda (srcStr),y
   beq done0
-  cmp #32
+  cmp #FIRST_PRINTABLE_CU
   bcc doneNewline
+
+  ; To save CPU time, don't try to draw the glyph for space
+  cmp #' '
   beq isSpace
-  ldx horzPos
-  jsr vwfPutTile
-  ldy #0
-isSpace:
+    ldx horzPos
+    jsr vwfPutTile
+    ldy #0
+  isSpace:
   lda (srcStr),y
   inc srcStr
   bne :+
     inc srcStr+1
   :
   tax
-  lda vwfChrWidths-32,x
+  lda vwfChrWidths-FIRST_PRINTABLE_CU,x
   clc
   adc horzPos
   sta horzPos

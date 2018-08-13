@@ -13,7 +13,7 @@
 title := a53menu
 version := 0.06wip2
 cfgtitle := demo
-othercfgs := # a53vol3 a53minimal
+othercfgs := # demo
 cfgversion := page1
 
 # Space-separated list of assembly language files that make up the
@@ -21,8 +21,8 @@ cfgversion := page1
 # (the \ character) at the end of the line and continue on the next.
 objlist := \
   zapkernels vwf7 quadpcm vwf_draw \
-  a53mapper main title cartmenu coredump donut identify \
-  interbank_fetch bcd pads mouse ppuclear paldetect \
+  a53mapper main title cartmenu coredump identify donut \
+  interbank_fetch bcd pads mouse ppuclear paldetect undte \
   pentlysound pentlymusic musicseq ntscPeriods
 
 AS65 = ca65
