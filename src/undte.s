@@ -1,12 +1,12 @@
 .include "global.inc"
 
 ; BPE (Byte Pair Encoding) or DTE (Digram Tree Encoding)
-; Code units 0-127 map to literal ASCII characters.
-; Code units 128-135 map to extra characters (arrows and the like).
-; Code units 136-255 map to pairs of code units.  The second
-; is added to a stack, and the first is interpreted as above.
+; Code units less then DTE_MIN_CODEUNIT map to literal characters.
+; Code units greater than or equal to DTE_MIN_CODEUNIT maps to
+; pairs of code units.  The second is added to a stack,
+; and the first is interpreted as above.
 
-DTE_MIN_CODEUNIT = 128+13
+DTE_MIN_CODEUNIT = 128
 
 .code
 .proc undte_line

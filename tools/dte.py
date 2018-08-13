@@ -112,7 +112,7 @@ def dte_newsymbol(lines, replacements, pairfreqs, compctrl=False, mincodeunit=12
     else:
         useful_items = ((k, v)
                         for k, v in pairfreqs.items()
-                        if all(c >= 32 for c in k))
+                        if all(c >= 0x10 for c in k))
     strpair, freq = min(useful_items, key=lambda x: (-x[1], x[0]))
     if freq < MINFREQ:
 ##        print("Done. freq is", freq)

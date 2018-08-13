@@ -24,7 +24,7 @@ def vwfcvt(filename, tileHt=8):
                     tilew = x
                     break
             if tilew == 0:
-                break
+                continue
             # step 2: encode the pixels
             widths.append(tilew)
             for y in range(tileHt):
