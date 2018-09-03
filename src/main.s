@@ -293,8 +293,9 @@ num_chr_banks = interbank_fetch_buf+75
   lda (titleptr),y  ; bit 7: 0 for CNROM, 1 for not
   and #$80
   bmi not_cnrom
-  ldy #CNROM_MAX_SIZE
-  sty num_chr_banks
+  ldy #TITLE_NUMBER_OF_CHR
+  lda (titleptr),y
+  sta num_chr_banks
 nextbank:
   lda #$00
   sta $5000

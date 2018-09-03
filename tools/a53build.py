@@ -695,6 +695,7 @@ indices into prgbanks and chrbanks respectively
     chrbanks = []
     prg_starts = []
     chr_starts = []
+    chr_lengths = []
     lines = []
 
     # At this point, split GNROMs into PRG banks, pad each NROM-128
@@ -716,16 +717,19 @@ indices into prgbanks and chrbanks respectively
                          % (len(prgbanks), format_sliceset(unused_ranges)))
             prgbanks.append((prgbytes, unused_ranges))
 
+        number_of_chr_banks = 0
         if 'chr' in romdata:
             for byte_offset in range(0, len(romdata['chr']), 0x2000):
                 chrdata = romdata['chr'][byte_offset:byte_offset + 0x2000]
                 assert len(chrdata) == 8192
                 lines.append("  CHR bank $%02x" % (len(chrbanks),))
                 chrbanks.append(chrdata)
+                number_of_chr_banks += 1
+        chr_lengths.append(number_of_chr_banks)
 
     if trace:
         print("\n".join(lines))
-    return (prgbanks, chrbanks, prg_starts, chr_starts)
+    return (prgbanks, chrbanks, prg_starts, chr_starts, chr_lengths)
 
 blank_bank = b''.join((
     bytes(32768 - 16),
@@ -1028,7 +1032,7 @@ def pad_to_pow2m1(prgbanks):
         prgbanks.append(ffd_prg_factory())
 
 def make_title_directory(titles, roms_by_name,
-                         prg_starts, chr_starts, screenshot_ids):
+                         prg_starts, chr_starts, chr_lengths, screenshot_ids):
     """Make a machine-readable directory of ROM titles.
 
 On the screen it is printed thus:
@@ -1077,6 +1081,7 @@ the name block, and the description block.
                    if t['chrbank'] >= 0
                    else 255)
                   for t in titles]
+    chr_lengths = [chr_lengths[roms_by_name[t['rom']]] for t in titles]
 
     titledir = bytearray()
     name_block = bytearray()
@@ -1114,7 +1119,7 @@ the name block, and the description block.
 
         titledir_data = [
             prgstart, chr_starts[i], screenshot_ids[i], year,
-            int(players), 0, 0, 0,
+            int(players), chr_lengths[i], 0, 0,
             name_offset & 0xFF, name_offset >> 8,
             0, 0,  # reserved for description data
             reset & 0xFF, reset >> 8,
@@ -1219,7 +1224,7 @@ def main(argv=None):
         print("%d exit patches, %d cfg patches"
               % (len(exit_patches), len(cfg_patches)))
 
-    (prgbanks, chrbanks, prg_starts, chr_starts) \
+    (prgbanks, chrbanks, prg_starts, chr_starts, chr_lengths) \
                = roms_to_banks(roms, start_bank)
     roms = [rom[0] for rom in roms]
     if trace:
@@ -1279,7 +1284,7 @@ def main(argv=None):
     # Create the title directory
     (titledir, name_block, desc_block, dte_replacements) \
                = make_title_directory(titles, roms_by_name,
-                                      prg_starts, chr_starts, screenshot_ids)
+                                      prg_starts, chr_starts, chr_lengths, screenshot_ids)
     pagedir_sz = sum(len(p[0]) for p in pages) + 2 * len(pages) + 1
     assert len(pagedir) == pagedir_sz
 

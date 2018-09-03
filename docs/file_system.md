@@ -114,7 +114,8 @@ Each activity has a 16-byte record:
 * 1 byte: Screenshot directory index
 * 1 byte: Year of first publication minus 1970 (48 means 2018)
 * 1 byte: Number of players type
-* 3 bytes: Unused
+* 1 byte: Number of CHR banks
+* 2 bytes: Unused
 * 2 bytes: Offset in activity names to start of title and author
 * 2 bytes: Offset in descriptions to start of description
 * 2 bytes: Reset vector
