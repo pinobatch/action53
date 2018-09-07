@@ -146,10 +146,13 @@ Page directory
 The menu is divided into several pages.
 
 * 1 byte: Number of pages
-* n bytes: Number of activities on each page
+* n bytes: For each page, the last index of activities plus 1.
 * NUL-terminated string: Title of first page
 * NUL-terminated string: Title of second page
 * etc.
+
+The first page is assumed to start at index 0,
+subsequent pages start at n-1 of "last index" list.
 
 The encoding of page titles and all other text in Action 53
 is an ASCII superset defined by `a53charset.py`.

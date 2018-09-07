@@ -291,40 +291,76 @@ no_zapper_trigger:
   lda new_keys
   lsr a
   bcc notRight
-  lda #6
-  jsr pently_start_sound
-  lda #5
-  jsr pently_start_sound
-  ldx cur_page
-  inx
-  cpx num_pages
-  bcc :+
-  ldx #0
-:
-  stx cur_page
-  jsr move_to_start_of_page
+    lda #6
+    jsr pently_start_sound
+    lda #5
+    jsr pently_start_sound
+      ; first get the cursor offset from the top of current page
+    lda cur_titleno
+    ldy cur_page
+    beq :+
+      sec
+      sbc (tab_data_ptr),y
+    :
+      ; Then go to the next page.
+    iny
+    cpy num_pages
+    bcc :+
+      ldy #0
+    :
+      ; and add the top of that page to the cursor offset
+    beq :+
+      clc
+      adc (tab_data_ptr),y
+    :
+    sty cur_page
+      ; finally move the cursor up if it ends up extending to the next page
+    iny
+    cmp (tab_data_ptr),y
+    bcc :+
+      ;,; sec
+      lda (tab_data_ptr),y
+      sbc #1
+    :
+    sta cur_titleno
   jmp needTabsDrawn
-notRight:
-
-  lsr a
-  bcc notLeft
-  lda #6
-  jsr pently_start_sound
-  lda #5
-  jsr pently_start_sound
-  
-  lda cur_page
-  bne :+
-  lda num_pages
-  sta cur_page
-:
-  dec cur_page
-  jsr move_to_end_of_page
-needTabsDrawn:
-  lda #DRAWS_TABS
-  sta draw_step
+  notRight:
+    lsr a
+    bcc notLeft
+    lda #6
+    jsr pently_start_sound
+    lda #5
+    jsr pently_start_sound
+      ; Same sort of deal as going right.
+    lda cur_titleno
+    ldy cur_page
+    beq :+
+      sec
+      sbc (tab_data_ptr),y
+    :
+    dey
+    bpl :+
+      ldy num_pages
+      dey
+    :
+    beq :+
+      clc
+      adc (tab_data_ptr),y
+    :
+    sty cur_page
+    iny
+    cmp (tab_data_ptr),y
+    bcc :+
+      ;,; sec
+      lda (tab_data_ptr),y
+      sbc #1
+    :
+    sta cur_titleno
+  needTabsDrawn:
+    lda #DRAWS_TABS
+    sta draw_step
   bne notUp
-notLeft:
+  notLeft:
 
   lsr a
   bcc notDown
@@ -431,27 +467,6 @@ found:
 right_page:
   rts
 .endproc
-
-.proc move_to_start_of_page
-  ldy cur_page
-  tya
-  beq :+
-  lda (tab_data_ptr),y
-:
-  sta cur_titleno
-  rts
-.endproc
-
-.proc move_to_end_of_page
-  ldy cur_page
-  iny
-  lda (tab_data_ptr),y
-  sec
-  sbc #1
-  sta cur_titleno
-  rts
-.endproc
-
 
 ;;
 ; Point tab_data_ptr at the first tab's title.
