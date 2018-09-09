@@ -1,10 +1,66 @@
+.include "nes.inc"
 .include "global.inc"
 
-.segment "LOWCODE"
+.segment "CODE"
 .proc start_game
+  ;A53 Mapper register write sequence:
+  ;  $$00 ($$7e) = 0x00
+  ;    Meaning; $5000 = 0x7e, $8000 = 0x00
+  ;    Which could expand to the cpu code;
+  ;      lda #$7e   sta $5000   lda #$00   sta $8000
+  ;  $$01 ($$7f) = start_mappercfg & 0x0C if fixed-lo else start_mappercfg & 0x0F
+  ;  $$80 ($$80) = start_mappercfg
+  ;  $$81 ($$81) = (start_bankptr),TITLE_PRG_BANK
+  ;  $5000 = 0x00 if start_mappercfg & 0x80
+  ;          0x01 if start_mappercfg & 0x30
+  ;          else 0x81
+
+  ;we would disable NMI here, but that already happened in load_titledir_chr_rom
+  ; sta #$00
+  ; sta PPUCTRL
+  ; sta PPUMASK
+
+  ; copy trampoline code to the end of the stack page with 'pha'
+  ; so that the stack pointer ends up on it's parameter stack
+  ldx #$ff
+  txs
+  lda start_entrypoint+1
+  pha
+  lda start_entrypoint+0
+  pha
+  ldx #trampoline_code_size
+  copy_trampoline_loop:
+    lda trampoline_code_begin-1, x
+    pha
+    dex
+  bne copy_trampoline_loop
+
+  ; compute parameters, in reverse order of register writing,
+  ; and push them to the stack.
+
+  ; Last thing first, set the final register select for game execution.
+  ; Rules for setting final register in $5000 for game execution:
+  ; If CNROM, and CHR loader supports CNROM, use $00 (CHR bank).
+  ; If game is 32K, use $81 (outer PRG bank) so that simple
+  ; reset code works.
+  ; Otherwise, use $01 (inner PRG bank).
+  ldy #0
+  lda start_mappercfg
+  bpl have_exe_mode_in_y
+    ; Game size 64K+: AOROM/BNROM/UNROM; use reg $01 (PRG inner bank)
+    iny
+    and #$30
+    bne have_exe_mode_in_y
+      ; Game size 32K: NROM (use outer bank)
+      ldy #$81
+  have_exe_mode_in_y:
+  tya
+  pha
+
+  ; Outer bank register
   ldy #TITLE_PRG_BANK
   lda (start_bankptr),y
-  sta (start_bankptr),y
+  pha
 
   ; Now the outer bank and reset vector are correct, and the mapper
   ; configuration has been saved in a variable.  Now interpret the
@@ -15,49 +71,80 @@
   ; | ||++--- PRG bank mode (0=32k, 2=fixed $8000, 3=fixed $C000)
   ; | ++----- Game size (0=32k, 1=64k, 2=128k, 3=256k)
   ; +-------- If set, game isn't CNROM
-  ; Rules for setting final reg in $5000:
-  ; If CNROM, and CHR loader supports CNROM, use $00 (CHR bank).
-  ; If game is 32K, use $81 (outer PRG bank) so that simple
-  ; reset code works.
-  ; Otherwise, use $01 (inner PRG bank).
-
-  ldx #$80
-  stx $5000
   lda start_mappercfg
-  sta $8000
-    
-  ; Set the inner bank: $00 for fixed-lo or $0F otherwise
-  ldy #$01
-  sty $5000
-  dey
+  pha
+
+  ; Starting inner PRG bank should be $0F except for mapper 180
+  ; where it should be $00.  Bits 3-2 of mapper mode control this.
+  ;,;lda start_mappercfg
   and #$0C
-  cmp #$08
-  beq :+
-    ldy #$0F
+  eor #$08  ; 0: mapper 180; nonzero: mapper 0, 2, 3, 7, 34
+  bne :+
+    lda #$0F
   :
-  sty $8000
-    
-  ; Set the reg that the program writes to.
-  ; For CNROM, use $00 (CHR bank)
+  pha
+
+  ; Clear CHR bank register
+  lda #$00
+  pha
+
+  ; Before commiting to mapper writes, Clear RAM and Nametables
+  ; while avoiding the trampoline area in stack page.
+  ; TODO: Code colf this to take less ROM bytes.
+  lda #$20
   ldx #$00
-  lda start_mappercfg
-  bpl have_regnum_in_x
+  sta PPUADDR
+  stx PPUADDR
+  lda #$00
+  clear_memory_loop:
+    sta $00,x
+    ; leave stack page for the ram code to clear.
+    sta $0200,x
+    sta $0300,x
+    sta $0400,x
+    sta $0500,x
+    sta $0600,x
+    sta $0700,x
+    ldy #16
+    clear_part_nt_loop:
+      sta PPUDATA
+      dey
+    bne clear_part_nt_loop
+    inx
+  bne clear_memory_loop
+jmp trampoline_enter
 
-  ; For games larger than 32K, use $01 (PRG inner bank)
+; Fortunately this part is all position-independent code
+; so the link script isn't polluted more.
+trampoline_code_begin:
+  ldx #$7e
+  loop:
+    stx $5000
+    pla
+    sta $8000
+    inx
+    cpx #$82
+  bcc loop
+  pla
+  sta $5000
+  ldx #$ff-((trampoline_code_end + 2) - clr_sp_loop)
+  txs
+  lda #$00
   inx
-  and #$30
-  bne have_regnum_in_x
+  clr_sp_loop:
+    dex
+    pha
+  bne clr_sp_loop
+  ; This should also leave the stack pointer at the bottom.
+.byte $4C  ; JMP opcode immediately before start_entrypoint
+trampoline_code_end:
 
-  ; Otherwise use $81 (PRG outer bank)
-  ldx #$81
-have_regnum_in_x:
-  stx $5000
-
-  ; and launch.
-  jmp (start_entrypoint)
+trampoline_code_size = trampoline_code_end - trampoline_code_begin
+trampoline_enter = $0200 - ((trampoline_code_end+2) - trampoline_code_begin)
 .endproc
 
-.code
+
+.segment "CODE"
 ;;
 ; Configures the Action 53 mapper to behave like oversize BNROM.
 .proc init_mapper
