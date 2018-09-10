@@ -1,27 +1,33 @@
+; Self-clearing Action 53 trampoline
+; By jroatch, 2018-09-09
+
 .include "nes.inc"
 .include "global.inc"
 
 .segment "CODE"
+;;
+; Clears all but the top few stack bytes and starts the chosen
+; activity.  NMI and rendering must be turned off.
+; @param start_entrypoint activity's entry point
+; @param start_mappercfg activity's starting mapper configuration
 .proc start_game
-  ;A53 Mapper register write sequence:
-  ;  $$00 ($$7e) = 0x00
-  ;    Meaning; $5000 = 0x7e, $8000 = 0x00
+  ; A53 Mapper register write sequence:
+  ;
+  ;  $$00 = 0x00
+  ;    Meaning; $5000 = 0x00, $8000 = 0x00
   ;    Which could expand to the cpu code;
-  ;      lda #$7e   sta $5000   lda #$00   sta $8000
-  ;  $$01 ($$7f) = start_mappercfg & 0x0C if fixed-lo else start_mappercfg & 0x0F
-  ;  $$80 ($$80) = start_mappercfg
-  ;  $$81 ($$81) = (start_bankptr),TITLE_PRG_BANK
+  ;      lda #$00   sta $5000   sta $8000
+  ;  $$01 = start_mappercfg & 0x0C if fixed-lo else start_mappercfg & 0x0F
+  ;  $$80 = start_mappercfg
+  ;  $$81 = (start_bankptr),TITLE_PRG_BANK
   ;  $5000 = 0x00 if start_mappercfg & 0x80
   ;          0x01 if start_mappercfg & 0x30
   ;          else 0x81
 
-  ;we would disable NMI here, but that already happened in load_titledir_chr_rom
-  ; sta #$00
-  ; sta PPUCTRL
-  ; sta PPUMASK
+  ; load_titledir_chr_rom already disabled NMI and rendering
 
-  ; copy trampoline code to the end of the stack page with 'pha'
-  ; so that the stack pointer ends up on it's parameter stack
+  ; Copy trampoline code to the end of the stack page with 'pha'
+  ; so that the stack pointer ends up on its parameter stack
   ldx #$ff
   txs
   lda start_entrypoint+1
@@ -35,7 +41,7 @@
     dex
   bne copy_trampoline_loop
 
-  ; compute parameters, in reverse order of register writing,
+  ; Compute parameters, in reverse order of register writing,
   ; and push them to the stack.
 
   ; Last thing first, set the final register select for game execution.
@@ -84,18 +90,14 @@
   :
   pha
 
-  ; Clear CHR bank register
-  lda #$00
-  pha
-
   ; Before commiting to mapper writes, Clear RAM and Nametables
   ; while avoiding the trampoline area in stack page.
-  ; TODO: Code colf this to take less ROM bytes.
+  ; TODO: Code golf this to take less ROM bytes.
   lda #$20
   ldx #$00
   sta PPUADDR
   stx PPUADDR
-  lda #$00
+  txa
   clear_memory_loop:
     sta $00,x
     ; leave stack page for the ram code to clear.
@@ -112,12 +114,24 @@
     bne clear_part_nt_loop
     inx
   bne clear_memory_loop
+
+  ; Start with CHR bank 0
+  ; ldx #$00  ; set by previous inx/bne pair
+  stx $5000
+  stx $8000
+
+  ; Prepare trampoline to set starting inner PRG bank (reg $01)
+  ; and pop game mode and outer bank values (regs $80 and $81)
+  inx
+  stx $5000
+  pla
+  ldx #$80
 jmp trampoline_enter
 
 ; Fortunately this part is all position-independent code
 ; so the link script isn't polluted more.
 trampoline_code_begin:
-  ldx #$7e
+  sta $8000
   loop:
     stx $5000
     pla
