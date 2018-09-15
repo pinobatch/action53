@@ -401,8 +401,9 @@ notUp:
   sta draw_step
 notA:
 
-  bit new_keys
-  bvc notB
+  lda new_keys
+  and #KEY_B|KEY_SELECT
+  beq notB
   lda showing_description
   beq notB
   lda #0
