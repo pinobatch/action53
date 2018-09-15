@@ -106,9 +106,17 @@ copied_end:
   rti
 .endproc
 
-; BRK $00 to add a breakpoint that survives rebuild
+; Action 53 dosn't use IRQ. Use this to catch runaway code that
+; hits a BRK opcode. This is also currently used to test the
+; full build by having the dummy ROM image simply execute
+; BRK while mapped to the menu.
 .proc irq
-  rti
+  pha
+  txa
+  pha
+  tya
+  pha
+jmp coredump
 .endproc
 
 ; 
