@@ -289,10 +289,6 @@ num_chr_banks = interbank_fetch_buf+75
   adc chrdir_entry_zp+1
   sta chrdir_entry+1
 
-  ldy #TITLE_MAPPER_CFG
-  lda (titleptr),y  ; bit 7: 0 for CNROM, 1 for not
-  and #$80
-  bmi not_cnrom
   ldy #TITLE_NUMBER_OF_CHR
   lda (titleptr),y
   sta num_chr_banks
@@ -304,7 +300,6 @@ nextbank:
   inc cur_chr_bank
   lda #$81
   sta $5000
-not_cnrom:
   lda chrdir_entry
   sta chrdir_entry_zp
   lda chrdir_entry+1
