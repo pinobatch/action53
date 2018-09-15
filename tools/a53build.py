@@ -325,7 +325,7 @@ rom['prg'] is modified.
         return
 
     padlen = 0x8000 - prgsize
-    resetvectorhi = rom['prg'][-1]
+    resetvectorhi = rom['prg'][-3]
     if resetvectorhi >= 0xC0:
         # If the ROM is linked for $C000-$FFFF, prepad it
         prgstart = 0x10000 - prgsize
