@@ -20,10 +20,10 @@ cfgversion := page1
 # PRG ROM.  If it gets too long for one line, you can add a backslash
 # (the \ character) at the end of the line and continue on the next.
 objlist := \
-  zapkernels vwf7 quadpcm vwf_draw \
-  a53mapper main title cartmenu coredump identify donut \
+  quadpcm vwf7 zapkernels identify vwf_draw \
+  a53mapper main title cartmenu coredump  donut \
   interbank_fetch bcd pads mouse ppuclear paldetect undte \
-  pentlysound pentlymusic musicseq ntscPeriods
+  pentlysound pentlymusic
 
 AS65 = ca65
 LD65 = ld65
@@ -88,7 +88,7 @@ $(objdir)/index.txt: makefile
 
 objlistntsc := $(foreach o,$(objlist),$(objdir)/$(o).o)
 
-map.txt $(title).prg: lastbank.x $(objlistntsc)
+map.txt $(title).prg: lastbank.x $(objlistntsc) $(objdir)/musicseq.o
 	$(LD65) -o $(title).prg -m map.txt -C $^
 
 $(objdir)/%.o: $(srcdir)/%.s $(srcdir)/nes.inc $(srcdir)/global.inc
@@ -98,19 +98,15 @@ $(objdir)/%.o: $(objdir)/%.s
 	$(AS65) $(CFLAGS65) $< -o $@
 
 # Files depending on extra headers
-$(objdir)/main.o $(objdir)/cartmenu.o: $(srcdir)/pently.inc
+$(objdir)/main.o $(objdir)/cartmenu.o: $(srcdir)/pentlyconfig.inc
 $(objdir)/pentlysound.o $(objdir)/pentlymusic.o: \
-  $(srcdir)/pentlyseq.inc $(srcdir)/pentlyconfig.inc $(srcdir)/pently.inc
+  $(srcdir)/pentlyconfig.inc $(objdir)/pentlybss.inc
 
 # Files that depend on .incbin'd files
 $(objdir)/cartmenu.o: $(objdir)/select_tiles.chr.donut
 $(objdir)/quadpcm.o: $(objdir)/selnow.qdp
 $(objdir)/selnow.qdp: tools/quadanalyze.py audio/selnow.wav
 	$(PY) $^ $@
-
-# Generate lookup tables at build time
-$(objdir)/ntscPeriods.s: tools/mktables.py
-	$(PY) $< period $@
 
 # Rules for CHR data
 
@@ -128,3 +124,13 @@ $(objdir)/%16.chr: $(imgdir)/%.png
 
 $(objdir)/%.s: tools/vwfbuild.py tilesets/%.png
 	$(PY) $^ $@
+
+# Build RAM map for pently
+$(objdir)/pentlybss.inc: tools/pentlybss.py $(srcdir)/pentlyconfig.inc
+	$(PY) $^ pentlymusicbase -o $@
+
+# Translate music project
+$(objdir)/%.s: tools/pentlyas.py src/%.pently
+	$(PY) $^ -o $@ --periods 76
+$(objdir)/%-rmarks.s: tools/pentlyas.py src/%.pently
+	$(PY) $^ -o $@ --periods 76 --rehearse

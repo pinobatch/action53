@@ -8,6 +8,7 @@
 *.pb53
 *.donut
 /obj/nes/*.s
+/obj/nes/*.inc
 /zip.in
 *.nes.deb
 /map.txt

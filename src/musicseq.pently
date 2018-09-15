@@ -1,0 +1,103 @@
+#
+# Pently audio engine
+# Sample songs
+#
+# Copyright 2001-2018 Damian Yerrick
+# 
+# This software is provided 'as-is', without any express or implied
+# warranty.  In no event will the authors be held liable for any damages
+# arising from the use of this software.
+# 
+# Permission is granted to anyone to use this software for any purpose,
+# including commercial applications, and to alter it and redistribute it
+# freely, subject to the following restrictions:
+# 
+# 1. The origin of this software must not be misrepresented; you must not
+#    claim that you wrote the original software. If you use this software
+#    in a product, an acknowledgment in the product documentation would be
+#    appreciated but is not required.
+# 2. Altered source versions must be plainly marked as such, and must not be
+#    misrepresented as being the original software.
+# 3. This notice may not be removed or altered from any source distribution.
+#
+
+durations stick
+notenames english
+
+sfx kick on noise
+  volume 12 10 8 6 5 4 3 2 1 1
+  pitch 10 0
+
+sfx snare on noise
+  volume 12 10 8 6 5 4 3 2 1 1
+  pitch 4 10
+
+sfx hihat on noise
+  volume 4 2 2 1
+  pitch 12
+  timbre | 0 1
+
+sfx openhat on noise
+  volume 6 5 4 4 3:3 2:3 1:5
+  pitch 12
+  timbre | 0 1
+
+drum kick kick
+drum snare snare
+drum clhat hihat
+drum ohat openhat
+
+instrument bass
+
+instrument framepop
+  volume 14 0
+
+# Attack injection
+# by Damian Yerrick, 2015
+# If anything, inspired by "The Big One
+# (Theme from The People's Court)"
+# Also similar to "Subterranean Creep" from Haunted: Halloween '85
+# for NES, but Greg Caldwell of Retrotainment Games said "It's
+# different enough" in a Skype conversation on June 19, 2016
+song attacktest
+  time 12/4
+  scale 8
+  tempo 85.9
+  # This is technically in New Jack Swing time, where the second 
+  # division is compound instead of the first, but there's no
+  # classical time sig for NJS.  So instead, we choose a time
+  # signature that forces the correct beat length (dotted half).
+
+  at 1
+  pattern drums
+    kick4. clhat snare clhat4 kick8
+    clhat4. kick snare clhat
+    kick4. clhat snare clhat4 snare8
+    clhat4. kick snare ohat
+  play drums
+  pattern bass on triangle with bass
+    eb2 r8 f4 r1 r2. c4 r8
+    eb2 r8 f4 r4 EP16 ab1 r2 EP00 c4 r8
+    eb2 r8 f4 r1 r2. c4 r8
+    # 2018-03-20: A bug that required staying on a note for at least
+    # 2 frames (2g) before it's picked up as the portamento base
+    # is now fixed.
+    eb2 r8 f4 r4 eb1g EP16 gb1 EP00 r2 c4 r8
+  play bass
+  attack on triangle
+  pattern atk on attack with framepop
+    relative
+    f'''4 ab8 c4 ab8 c4 eb8 c4 eb8
+    g4 eb8 c4 eb8 c4 ab8 c4 ab8
+  play atk
+
+  at 4
+  play atk down 2
+  at 4:4
+  pattern drumfill
+    snare4 ohat8 snare snare snare
+  play drumfill
+  at 5
+  fine
+#  da capo
+

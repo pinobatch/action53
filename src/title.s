@@ -88,6 +88,7 @@ title_wait_A:
 
   ; If time expired, blank the screen and play audio
 selnow:
+  jsr pently_init  ; kill sound
   lda #0
   sta PPUMASK
   jmp quadpcm_test
@@ -275,7 +276,7 @@ str = $00
     jmp drawloop
 .endproc
 
-.rodata
+.segment "RODATA"
 COLOR1ON0 = $00
 COLOR3ON2 = $20
 COLOR0ON1 = $40
@@ -324,7 +325,7 @@ forever:
   jmp forever
 .endproc
 
-.rodata
+.segment "RODATA"
 no_games_title_strings:
 .byte 14+$00,  96, "No games added.",0
 .byte $FF

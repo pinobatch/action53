@@ -2,41 +2,72 @@
 ; Pently audio engine
 ; Public API
 ;
-; Copyright 2015-2016 Damian Yerrick
+; Copyright 2015-2018 Damian Yerrick
 ; 
-; Permission is hereby granted, free of charge, to any person
-; obtaining a copy of this software and associated documentation
-; files (the "Software"), to deal in the Software without
-; restriction, including without limitation the rights to use, copy,
-; modify, merge, publish, distribute, sublicense, and/or sell copies
-; of the Software, and to permit persons to whom the Software is
-; furnished to do so, subject to the following conditions:
+; This software is provided 'as-is', without any express or implied
+; warranty.  In no event will the authors be held liable for any damages
+; arising from the use of this software.
 ; 
-; The above copyright notice and this permission notice shall be
-; included in all copies or substantial portions of the Software.
+; Permission is granted to anyone to use this software for any purpose,
+; including commercial applications, and to alter it and redistribute it
+; freely, subject to the following restrictions:
 ; 
-; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-; EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-; MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-; NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
-; BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-; ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-; THE SOFTWARE.
+; 1. The origin of this software must not be misrepresented; you must not
+;    claim that you wrote the original software. If you use this software
+;    in a product, an acknowledgment in the product documentation would be
+;    appreciated but is not required.
+; 2. Altered source versions must be plainly marked as such, and must not be
+;    misrepresented as being the original software.
+; 3. This notice may not be removed or altered from any source distribution.
 ;
 
 ; Configuration ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; These default values are used if pentlyconfig.inc is not included.
+; If making build-time decisions, include pentlyconfig.inc first.
 
 ; Enable tvSystem-driven correction for PAL NES and Dendy
 .ifndef PENTLY_USE_PAL_ADJUST
 PENTLY_USE_PAL_ADJUST = 1
 .endif
 
+; Enable music playback
+.ifndef PENTLY_USE_MUSIC
+PENTLY_USE_MUSIC = 1
+.endif
+
+; Controls how music and sound effects are mixed
+.ifndef PENTLY_USE_MUSIC_IF_LOUDER
+PENTLY_USE_MUSIC_IF_LOUDER = 1
+.endif
+.ifndef PENTLY_USE_SQUARE_POOLING
+PENTLY_USE_SQUARE_POOLING = 1
+.endif
+
+; When turned off, and sound effects or instruments on triangle
+; use timbre 0 or 1, sound may be cut off prematurely.
+.ifndef PENTLY_USE_TRIANGLE_DUTY_FIX
+PENTLY_USE_TRIANGLE_DUTY_FIX = 1
+.endif
+
 ; Enable row callbacks
 .ifndef PENTLY_USE_ROW_CALLBACK
 PENTLY_USE_ROW_CALLBACK = 0
+.endif
+
+; Write to visualizer registers
+.ifndef PENTLY_USE_VIS
+PENTLY_USE_VIS = 0
+.endif
+
+; Enable seeking to rehearsal marks
+.ifndef PENTLY_USE_REHEARSAL
+PENTLY_USE_REHEARSAL = 0
+.endif
+
+; Enable variable mix (track muting)
+.ifndef PENTLY_USE_VARMIX
+PENTLY_USE_VARMIX = 0
 .endif
 
 ; Enable vibrato (sinusoidal pitch modulation with an LFO of
@@ -50,6 +81,18 @@ PENTLY_USE_VIBRATO = 1
 .ifndef PENTLY_USE_ARPEGGIO
 PENTLY_USE_ARPEGGIO = 1
 .endif
+
+; Enable portamento (slide from one pitch to another)
+.ifndef PENTLY_USE_PORTAMENTO
+PENTLY_USE_PORTAMENTO = 1
+.endif
+
+; Enable first-order lowpass portamento like Roland TB-303 Bass Line
+.ifndef PENTLY_USE_303_PORTAMENTO
+PENTLY_USE_303_PORTAMENTO = PENTLY_USE_PORTAMENTO
+.endif
+
+.assert (!PENTLY_USE_303_PORTAMENTO) || PENTLY_USE_PORTAMENTO, error, "cannot use 303 portamento without portamento"
 
 ; Enable attack envelopes on instruments
 .ifndef PENTLY_USE_ATTACK_PHASE
@@ -74,30 +117,30 @@ PENTLY_USE_BPMMATH = 1
 ;;
 ; Initializes the sound channels and stops all sound effects
 ; and music.
-.global pently_init
+.global pently_init, _pently_init
 
 ;;
 ; Updates sound registers.  Call this once each frame.
 ; Overwrites: ???
-.global pently_update
+.global pently_update, _pently_update
 
 ;;
 ; Starts a sound effect.
 ; @param A the sound effect ID
-.global pently_start_sound
+.global pently_start_sound, _pently_start_sound
 
 ;;
 ; Starts a piece of music.
 ; @param A the music ID
-.global pently_start_music
+.global pently_start_music, _pently_start_music
 
 ;;
 ; Stops the music.
-.global pently_stop_music
+.global pently_stop_music, _pently_stop_music
 
 ;;
 ; Resumes the stopped music.
-.global pently_resume_music
+.global pently_resume_music, _pently_resume_music
 
 ;;
 ; Plays note A on channel X (0, 4, 8, 12) with instrument Y.
@@ -107,7 +150,19 @@ PENTLY_USE_BPMMATH = 1
 ;;
 ; Returns the playing position as a fraction of a beat from 0 to 95.
 ; (Implemented in bpmmath.s)
-.global pently_get_beat_fraction
+.global pently_get_beat_fraction, _pently_get_beat_fraction
+
+;;
+; Skips to a given row in the sequence, which must be later than the
+; current row. (Requires PENTLY_USE_REHEARSAL)
+; @param X rows*256
+; @param A rows
+.global pently_skip_to_row, _pently_skip_to_row
+
+; Constant arrays ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Frames per minute for each TV system
+.global pently_fpmLo, pently_fpmHi
 
 ; Fields ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
@@ -116,7 +171,7 @@ PENTLY_USE_BPMMATH = 1
 
 ;;
 ; Nonzero if music is currently playing
-.global pently_music_playing
+.globalzp pently_music_playing
 
 ;;
 ; The number of rows per beat set by the current music track.
@@ -129,6 +184,29 @@ PENTLY_USE_BPMMATH = 1
 ;;
 ; The fraction of a row until the next row is processed.
 ; Will range from -3000 to 0 on PAL or -3606 to 0 on NTSC.
-.global pently_tempoCounterLo, pently_tempoCounterHi
+.globalzp pently_tempoCounterLo, pently_tempoCounterHi
 
-.global pently_fpmLo, pently_fpmHi
+; Used for enhanced visualization
+.global pently_vis_pitchlo, pently_vis_pitchhi, pently_vis_dutyvol
+.global pently_vis_arpphase, pently_vis_note
+
+;;
+; Number of sequence rows that have been processed
+; (Requires PENTLY_USE_REHEARSAL)
+.global pently_rowslo, pently_rowshi
+
+; Modifiable fields ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;
+; Play all notes in this track as rests if bit 7 is set.
+; (Requires PENTLY_USE_VARMIX)
+.global pently_mute_track
+
+;;
+; Bit 7: Pause playback for step at a time playback
+; Bits 2-0: Scale tempo by a factor of 4
+; (Requires PENTLY_USE_REHEARSAL)
+.global pently_tempo_scale
+
+; Size (for debugging) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+.global PENTLYSOUND_SIZE, PENTLYMUSIC_SIZE

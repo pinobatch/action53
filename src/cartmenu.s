@@ -291,9 +291,7 @@ no_zapper_trigger:
   lda new_keys
   lsr a
   bcc notRight
-    lda #6
-    jsr pently_start_sound
-    lda #5
+    lda #1
     jsr pently_start_sound
       ; first get the cursor offset from the top of current page
     lda cur_titleno
@@ -327,9 +325,7 @@ no_zapper_trigger:
   notRight:
     lsr a
     bcc notLeft
-    lda #6
-    jsr pently_start_sound
-    lda #5
+    lda #1
     jsr pently_start_sound
       ; Same sort of deal as going right.
     lda cur_titleno
@@ -395,6 +391,8 @@ notUp:
   bpl notA
   lda showing_description
   bne done
+  lda #3
+  jsr pently_start_sound
   lda #1
   sta showing_description
   lda #DRAWS_TABS
@@ -406,6 +404,8 @@ notA:
   beq notB
   lda showing_description
   beq notB
+  lda #0
+  jsr pently_start_sound
   lda #0
   sta showing_description
   lda #DRAWS_TABS
@@ -424,7 +424,7 @@ done:
 .endproc
 
 .proc move_to_page_with_title
-  lda #5
+  lda #2
   jsr pently_start_sound
   lda showing_description
   beq not_showing_desc
@@ -463,7 +463,7 @@ found:
   sty cur_page
   lda #DRAWS_TABS
   sta draw_step
-  lda #6
+  lda #1
   jsr pently_start_sound
 right_page:
   rts
@@ -1677,7 +1677,7 @@ ty = $01
     bcc rowloop
   rts
 .pushseg
-.rodata
+.segment "RODATA"
 s0data:
   .byt 40-1, SPRITE_0_TILE, $A2, 22  ; Sprite 0: above first line of text
   .byt 32-1, TAB_ARROW_TILE, $02     ; Second sprite: arrow
