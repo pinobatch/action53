@@ -122,128 +122,112 @@ plane_buffer    = temp+8  ; 8 bytes
       ; counter is negative so that we can use the
       ; high bits to easily set the V flag later.
     plane_loop:
-      lda #$00
-      ldx plane_def
-        ; don't yet shift out plane_def, we'll use the
-        ; bit again to select the cheaper buffer copy later
-      bpl pb8_is_all_zero
+      asl plane_def
+      bcc do_zero_plane
+      read_pb8:
         iny
         lda (donut_stream_ptr), y
-      pb8_is_all_zero:
-      sta pb8_ctrl
+        sta pb8_ctrl
 
-      lda even_odd
-      and #$30
-      beq not_predicted_from_ff
-        lda #$ff
-      not_predicted_from_ff:
-        ; else A = 0x00
-      ldx #8-1
-      pb8_loop:
-        asl pb8_ctrl
-        bcc pb8_use_prev
-          iny
-          lda (donut_stream_ptr), y
-        pb8_use_prev:
-        sta plane_buffer, x
-        dex
-      bpl pb8_loop
+        lda even_odd
+        and #$30
+        beq not_predicted_from_ff
+          lda #$ff
+        not_predicted_from_ff:
+          ; else A = 0x00
+        ldx #8-1
+        pb8_loop:
+          asl pb8_ctrl
+          bcc pb8_use_prev
+            iny
+            lda (donut_stream_ptr), y
+          pb8_use_prev:
+          sta plane_buffer, x
+          dex
+        bpl pb8_loop
 
-      sty temp_y
-        ; use Y for block buffer pointer
-      ldy block_offset
-      clc
-      tya
-      adc #8
-      sta block_offset
-        ; while we have block_offset loaded,
-        ; might as well advance it for the next plane.
+        jsr setup_for_block_writing
 
-      lda even_odd
-      eor block_header
-      sta even_odd
-        ; likewise for even_odd
-      ;,; lda even_odd
-      and #$c0
-      bne overlapping_plane
-        clv
-      bvc no_overlapping_plane  ;,; jmp no_overlapping_planes
-      overlapping_plane:
-        ;,; lda even_odd
-        ;,; and #$80
-        bmi dont_temp_subtract_y
-          tya
-          ;,; sec
-          ;,; sbc #08
-          sbc #8-1
-            ; carry cleared is certain from 'adc #8' above
-          tay
-        dont_temp_subtract_y:
-        bit loop_counter  ; set V
-      no_overlapping_plane:
-
-      ldx #$100-8
-      asl plane_def
-        ; If the entire plane is already all 0 or all 1 bits,
-        ; then we know it'll be the same with or without
-        ; rotation. So use the faster copy operation.
-      bcc without_bit_flip
-      lda block_header
-      and #$08
-      beq without_bit_flip
-        flip_bits_loop:
-          lsr plane_buffer+0
-          ror
-          lsr plane_buffer+1
-          ror
-          lsr plane_buffer+2
-          ror
-          lsr plane_buffer+3
-          ror
-          lsr plane_buffer+4
-          ror
-          lsr plane_buffer+5
-          ror
-          lsr plane_buffer+6
-          ror
-          lsr plane_buffer+7
-          ror
-          bvc not_both_planes_1
-            sta temp_a
-            eor donut_block_buffer+8, y
-            sta donut_block_buffer+8, y
-            lda temp_a
-          not_both_planes_1:
-          eor donut_block_buffer, y
-          sta donut_block_buffer, y
-          iny
-          inx
-        bne flip_bits_loop
-      beq end_plane_buffer_copy  ;,; jmp end_plane_buffer_copy
-      without_bit_flip:
-        copy_plane_loop:
-          lda plane_buffer+8, x  ; TODO assert that this is a zeropage opcode.
-          beq is_zero_byte
-            eor donut_block_buffer, y
-            sta donut_block_buffer, y
-            bvc not_both_planes_2
-              lda plane_buffer+8, x
+        ldx #$100-8
+        lda block_header
+        and #$08
+        beq without_bit_flip
+          flip_bits_loop:
+            lsr plane_buffer+0
+            ror
+            lsr plane_buffer+1
+            ror
+            lsr plane_buffer+2
+            ror
+            lsr plane_buffer+3
+            ror
+            lsr plane_buffer+4
+            ror
+            lsr plane_buffer+5
+            ror
+            lsr plane_buffer+6
+            ror
+            lsr plane_buffer+7
+            ror
+            bvc not_both_planes_1
+              sta temp_a
               eor donut_block_buffer+8, y
               sta donut_block_buffer+8, y
+              lda temp_a
+            not_both_planes_1:
+            eor donut_block_buffer, y
+            sta donut_block_buffer, y
+            iny
+            inx
+          bne flip_bits_loop
+        beq end_plane_buffer_copy  ;,; jmp end_plane_buffer_copy
+        without_bit_flip:
+          copy_plane_loop:
+            bvc not_both_planes_2
+              lda donut_block_buffer+8, y
+              eor plane_buffer+8, x
+              sta donut_block_buffer+8, y
             not_both_planes_2:
-          is_zero_byte:
-            ; speed improvment by skipping XORing zeros
-          iny
-          inx
-        bne copy_plane_loop
-      end_plane_buffer_copy:
+            lda donut_block_buffer, y
+            eor plane_buffer+8, x  ; TODO assert that this is a zeropage opcode.
+            sta donut_block_buffer, y
+            iny
+            inx
+          bne copy_plane_loop
+        end_plane_buffer_copy:
+        ldy temp_y
+          ; Restore Y as input pointer
+        inc loop_counter
+      bne plane_loop
+    beq end_planes  ;,; jmp end_planes
+      do_zero_plane:
+        jsr setup_for_block_writing
 
-      ldy temp_y
-        ; Restore Y as input pointer
-      inc loop_counter
-    beq plane_loop_skip
-      jmp plane_loop
-    plane_loop_skip:
+        lda even_odd
+        eor block_header
+        and #$30
+        beq not_fully_inverting_planes
+          ldx #$100-8
+          fill_plane_loop:
+            bvc not_both_planes_3
+              lda donut_block_buffer+8, y
+              eor #$ff
+              sta donut_block_buffer+8, y
+            not_both_planes_3:
+            lda donut_block_buffer, y
+            eor #$ff
+            sta donut_block_buffer, y
+            iny
+            inx
+          bne fill_plane_loop
+        not_fully_inverting_planes:
+        ldy temp_y
+          ; Restore Y as input pointer
+        inc loop_counter
+      beq long_jump_plane_loop
+        jmp plane_loop
+      long_jump_plane_loop:
+    end_planes:
     ldx block_offset
   end_block:
   sec  ;,; iny   clc
@@ -258,6 +242,40 @@ rts
 
 donut_decompress_block_table:
   .byte $00, $55, $aa, $ff
+
+setup_for_block_writing:
+  sty temp_y
+    ; use Y for block buffer pointer
+  ldy block_offset
+  clc
+  tya
+  adc #8
+  sta block_offset
+    ; while we have block_offset loaded,
+    ; might as well advance it for the next plane.
+  lda even_odd
+  eor block_header
+  sta even_odd
+    ; likewise for even_odd
+  ;,; lda even_odd
+  and #$c0
+  bne overlapping_plane
+    clv
+  bvc no_overlapping_plane  ;,; jmp no_overlapping_planes
+  overlapping_plane:
+    ;,; lda even_odd
+    ;,; and #$80
+    bmi dont_temp_subtract_y
+      tya
+      ;,; sec
+      ;,; sbc #08
+      sbc #8-1
+        ; carry cleared is certain from 'adc #8' above
+      tay
+    dont_temp_subtract_y:
+    bit loop_counter  ; set V
+  no_overlapping_plane:
+rts
 .endproc
 
 ;;
