@@ -208,7 +208,14 @@ plane_buffer    = temp+8  ; 8 bytes
           ror
           lsr plane_buffer+7
           ror
-          jsr write_byte_to_block_buffers
+          bvc not_both_planes_1
+            sta temp_a
+            eor donut_block_buffer+8, y
+            sta donut_block_buffer+8, y
+            lda temp_a
+          not_both_planes_1:
+          eor donut_block_buffer, y
+          sta donut_block_buffer, y
           iny
           inx
         bne flip_bits_loop
@@ -217,7 +224,13 @@ plane_buffer    = temp+8  ; 8 bytes
         copy_plane_loop:
           lda plane_buffer+8, x  ; TODO assert that this is a zeropage opcode.
           beq is_zero_byte
-            jsr write_byte_to_block_buffers
+            eor donut_block_buffer, y
+            sta donut_block_buffer, y
+            bvc not_both_planes_2
+              lda plane_buffer+8, x
+              eor donut_block_buffer+8, y
+              sta donut_block_buffer+8, y
+            not_both_planes_2:
           is_zero_byte:
             ; speed improvment by skipping XORing zeros
           iny
@@ -228,7 +241,9 @@ plane_buffer    = temp+8  ; 8 bytes
       ldy temp_y
         ; Restore Y as input pointer
       inc loop_counter
-    bne plane_loop
+    beq plane_loop_skip
+      jmp plane_loop
+    plane_loop_skip:
     ldx block_offset
   end_block:
   sec  ;,; iny   clc
@@ -239,17 +254,6 @@ plane_buffer    = temp+8  ; 8 bytes
     inc donut_stream_ptr+1
   add_stream_ptr_no_inc_high_byte:
   dec donut_block_count
-rts
-
-write_byte_to_block_buffers:
-  bvc not_both_planes
-    sta temp_a
-    eor donut_block_buffer+8, y
-    sta donut_block_buffer+8, y
-    lda temp_a
-  not_both_planes:
-  eor donut_block_buffer, y
-  sta donut_block_buffer, y
 rts
 
 donut_decompress_block_table:
