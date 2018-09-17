@@ -1,4 +1,19 @@
-0.06wip2 (2018-03-xx)
+0.06wip3 (2018-09-17)
+* Sound engine updated to latest version of Pently.
+  Consequently the old sound data was not converted.
+* The correct number of CHR pages loads for CNROM titles.
+* Moving left/right between pages doesn't force cursor to the ends
+  of the page.
+* RAM and Nametables are cleared when loading an activity.
+* Descriptions compressed with DTE
+* Graphics and activity CHR banks now compressed with "Donut"
+* Added additional Characters to the VWF font.
+  Control Pad  (suggested by M_Tee)
+    https://forums.nesdev.com/viewtopic.php?p=215648#p215648
+  and bird/Twitter logo from pinobatch/240p-test-mini
+* Menu tabs overlap to give more space
+
+0.06wip2 (2018-03-10)
 * Menu: Compress border graphics
 * Menu: Read notice strings on title screen from a list pointed to in
   the keyblock, instead of hardcoded strings with hardcoded addresses
