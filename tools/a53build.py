@@ -21,6 +21,12 @@ default_menu_prg = '../a53menu.prg'
 # This must match the value in undte.s
 DTE_MIN_CODEUNIT = 128
 
+# Prior to 2018-09-17, the menu's code and data fit in 16K.  With the
+# expansion of Pently, particularly with the addition of portamento,
+# some things had to be moved below $BFF0.
+# This is the first address that the builder's not free to overwrite.
+FINAL_BANK_FREE_END = 0xB800
+
 # Parsing the config file ###########################################
 
 def oxford_join(seq, glue="and"):
@@ -1251,7 +1257,7 @@ def main(argv=None):
     # data and unused list.  This way I can insert objects wherever
     # they'll fit (prgbanks) or into the final bank specifically
     # (final_banks).
-    final_banks = [(final_bank, [(0x8000, 0xBFF0)])]
+    final_banks = [(final_bank, [(0x8000, FINAL_BANK_FREE_END)])]
     prgbanks.extend(final_banks)
 
     # Create those directories that don't depend on other directories
