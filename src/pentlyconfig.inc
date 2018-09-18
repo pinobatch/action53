@@ -5,16 +5,16 @@ PENTLY_USE_MUSIC = 1
 
 ; Music engine features that not all projects will need
 ; Disable to save ROM and RAM space
-PENTLY_USE_VIBRATO = 1
+PENTLY_USE_VIBRATO = 0
 PENTLY_USE_PORTAMENTO = 1
-PENTLY_USE_303_PORTAMENTO = 1
+PENTLY_USE_303_PORTAMENTO = 0
 
-PENTLY_USE_ARPEGGIO = 1
+PENTLY_USE_ARPEGGIO = 0
 PENTLY_USE_ATTACK_PHASE = 1
 PENTLY_USE_ATTACK_TRACK = 1
 
-PENTLY_USE_CHANNEL_VOLUME = 1
-PENTLY_USE_VARMIX = 1
+PENTLY_USE_CHANNEL_VOLUME = 0
+PENTLY_USE_VARMIX = 0
 
 ; Features that affect policy more than ROM space, such as
 ; sound effect interruption
