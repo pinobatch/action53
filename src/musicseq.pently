@@ -24,6 +24,26 @@
 durations stick
 notenames english
 
+sfx move_cursor on pulse
+  timbre 1
+  volume 15 4
+  pitch a'':2
+
+sfx pageupdown on noise
+  rate 2
+  volume 7 9 9 8 6
+  pitch 4 5 4 3 1
+
+sfx view_description on pulse
+  timbre 1
+  volume 15 4 15 4 15 4 4 2 4 2 4 2 2 1 2 1 2 1
+  pitch | a':2 d'':2 g'':2
+
+sfx start_activity on pulse
+  timbre 1:6 2:9
+  volume 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1
+  pitch | c'' d#'' f'' c'' d'' f''
+
 sfx kick on noise
   volume 12 10 8 6 5 4 3 2 1 1
   pitch 10 0

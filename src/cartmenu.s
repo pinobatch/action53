@@ -15,6 +15,10 @@
 ciSrc0 = tab_data_ptr
 ciSrc1 = desc_data_ptr
 
+; Pently sound effect IDs
+.importzp PE_move_cursor, PE_pageupdown, PE_view_description, PE_start_activity
+.importzp PE_kick, PE_snare, PE_hihat, PE_openhat
+
 ; Above the break
 SPRITE_0_TILE = $01
 BLANK_TILE = $02
@@ -291,7 +295,7 @@ no_zapper_trigger:
   lda new_keys
   lsr a
   bcc notRight
-    lda #1
+    lda #PE_pageupdown
     jsr pently_start_sound
       ; first get the cursor offset from the top of current page
     lda cur_titleno
@@ -325,7 +329,7 @@ no_zapper_trigger:
   notRight:
     lsr a
     bcc notLeft
-    lda #1
+    lda #PE_pageupdown
     jsr pently_start_sound
       ; Same sort of deal as going right.
     lda cur_titleno
@@ -391,7 +395,7 @@ notUp:
   bpl notA
   lda showing_description
   bne done
-  lda #3
+  lda #PE_view_description
   jsr pently_start_sound
   lda #1
   sta showing_description
@@ -404,7 +408,7 @@ notA:
   beq notB
   lda showing_description
   beq notB
-  lda #0
+  lda #PE_kick
   jsr pently_start_sound
   lda #0
   sta showing_description
@@ -424,7 +428,7 @@ done:
 .endproc
 
 .proc move_to_page_with_title
-  lda #2
+  lda #PE_move_cursor
   jsr pently_start_sound
   lda showing_description
   beq not_showing_desc
@@ -463,7 +467,7 @@ found:
   sty cur_page
   lda #DRAWS_TABS
   sta draw_step
-  lda #1
+  lda #PE_pageupdown
   jsr pently_start_sound
 right_page:
   rts
