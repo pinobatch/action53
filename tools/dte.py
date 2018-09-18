@@ -42,7 +42,11 @@ lipsum = """"But I must explain to you how all this mistaken idea of denouncing 
 On the other hand, we denounce with righteous indignation and dislike men who are so beguiled and demoralized by the charms of pleasure of the moment, so blinded by desire, that they cannot foresee the pain and trouble that are bound to ensue; and equal blame belongs to those who fail in their duty through weakness of will, which is the same as saying through shrinking from toil and pain. These cases are perfectly simple and easy to distinguish. In a free hour, when our power of choice is untrammelled and when nothing prevents our being able to do what we like best, every pleasure is to be welcomed and every pain avoided. But in certain circumstances and owing to the claims of duty or the obligations of business it will frequently occur that pleasures have to be repudiated and annoyances accepted. The wise man therefore always holds in these matters to this principle of selection: he rejects pleasures to secure other greater pleasures, or else he endures pains to avoid worse pains.
 --M. T. Cicero, "Extremes of Good and Evil", tr. H. Rackham"""
 
+# Minimum frequency to compress a pair
 MINFREQ = 3
+# First code unit that is not considered a control character;
+# should match value in vwf_draw.s
+FIRST_PRINTABLE_CU = 0x14
 
 def olcount(haystack, needle):
     """Count times the 2-character needle appears in haystack, including overlaps."""
@@ -112,7 +116,7 @@ def dte_newsymbol(lines, replacements, pairfreqs, compctrl=False, mincodeunit=12
     else:
         useful_items = ((k, v)
                         for k, v in pairfreqs.items()
-                        if all(c >= 0x10 for c in k))
+                        if all(c >= FIRST_PRINTABLE_CU for c in k))
     strpair, freq = min(useful_items, key=lambda x: (-x[1], x[0]))
     if freq < MINFREQ:
 ##        print("Done. freq is", freq)

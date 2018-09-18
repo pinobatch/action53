@@ -2,9 +2,10 @@
 
 ; BPE (Byte Pair Encoding) or DTE (Digram Tree Encoding)
 ; Code units less then DTE_MIN_CODEUNIT map to literal characters.
-; Code units greater than or equal to DTE_MIN_CODEUNIT maps to
-; pairs of code units.  The second is added to a stack,
-; and the first is interpreted as above.
+; Code units greater than or equal to DTE_MIN_CODEUNIT (which must
+; be at least 128 and must match the value in a53build.py) map to
+; pairs of code units.  The second is added to a stack, and the
+; first is interpreted as above.
 
 DTE_MIN_CODEUNIT = 128
 
