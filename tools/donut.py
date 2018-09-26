@@ -120,7 +120,8 @@ def compress_block(input_block, prev_block=None, use_bit_flip=True):
         xor_block = bytes( input_block[i] ^ prev_block[i] for i in range(64) )
     cblock_choices = [b'\xfe' + input_block]
 #    for attempt_type in range(0, 0xc0, 4):
-    for attempt_type in [0b00000100]:
+    for attempt_type in [0b00000100, 0b00010100, 0b00100100, 0b00110100,
+                         0b00001100, 0b00011100, 0b00101100, 0b00111100]:
         if not use_bit_flip and attempt_type & 0x08:
             continue
         if attempt_type & 0x04:

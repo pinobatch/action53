@@ -47,6 +47,10 @@ pb8_ctrl:               .res 1
 block_offset:           .res 1
 block_offset_end:       .res 1
 temp_y:                 .res 1
+even_odd:               .res 1
+plane_predict_by:       .res 1
+plane_predict_by_xor:   .res 1
+is_rotated:             .res 1
 plane_buffer:           .res 8
 
 .segment "CODE"
@@ -80,6 +84,7 @@ plane_buffer:           .res 8
   jmp end_block
   do_normal_block:
     sta block_header
+
     stx block_offset
 
     lda block_header
@@ -92,18 +97,43 @@ plane_buffer:           .res 8
     read_plane_def_from_stream:
     sta plane_def
 
+    lda block_header
+    and #$08
+    beq :+
+      lda #$ff
+    :
+    sta is_rotated
+
+    lda block_header
+    and #$20
+    beq :+
+      lda #$ff
+    :
+    sta plane_predict_by
+
+    lda block_header
+    and #$10
+    beq :+
+      lda #$ff
+    :
+    eor plane_predict_by
+    sta plane_predict_by_xor
+
     lda block_offset
     plane_loop:
       clc
       adc #8
       sta block_offset
       tax
+
       asl plane_def
       bcs do_pb8_plane
       do_zero_plane:
         sty temp_y
+        lda plane_predict_by
+        eor plane_predict_by_xor
+        sta plane_predict_by
         ldy #8
-        lda #$00
         fill_plane_loop:
           dex
           sta donut_block_buffer, x
@@ -116,7 +146,49 @@ plane_buffer:           .res 8
         lda (donut_stream_ptr), y
         sta pb8_ctrl
 
-        lda #$00
+        lda plane_predict_by
+        eor plane_predict_by_xor
+        sta plane_predict_by
+        bit is_rotated
+      bpl do_normal_pb8_plane
+      do_rotated_pb8_plane:
+        ldx #8
+        buffered_pb8_loop:
+          asl pb8_ctrl
+          bcc buffered_pb8_use_prev
+            iny
+            lda (donut_stream_ptr), y
+          buffered_pb8_use_prev:
+          dex
+          sta plane_buffer, x
+        bne buffered_pb8_loop
+        sty temp_y
+        ldy #8
+        ldx block_offset
+        flip_bits_loop:
+          asl plane_buffer+0
+          ror
+          asl plane_buffer+1
+          ror
+          asl plane_buffer+2
+          ror
+          asl plane_buffer+3
+          ror
+          asl plane_buffer+4
+          ror
+          asl plane_buffer+5
+          ror
+          asl plane_buffer+6
+          ror
+          asl plane_buffer+7
+          ror
+          dex
+          sta donut_block_buffer, x
+          dey
+        bne flip_bits_loop
+        ldy temp_y
+      jmp end_plane
+      do_normal_pb8_plane:
         sec
         rol pb8_ctrl
         pb8_loop:
