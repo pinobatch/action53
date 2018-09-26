@@ -119,7 +119,8 @@ def compress_block(input_block, prev_block=None, use_bit_flip=True):
             raise ValueError("input previous block is less then 64 bytes.")
         xor_block = bytes( input_block[i] ^ prev_block[i] for i in range(64) )
     cblock_choices = [b'\xfe' + input_block]
-    for attempt_type in range(0, 0xc0, 4):
+#    for attempt_type in range(0, 0xc0, 4):
+    for attempt_type in [0b00000100]:
         if not use_bit_flip and attempt_type & 0x08:
             continue
         if attempt_type & 0x04:

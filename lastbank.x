@@ -19,7 +19,7 @@ MEMORY {
 SEGMENTS {
   ZEROPAGE:   load = ZP, type = zp;
   BSS:        load = RAM, type = bss, define = yes, align = $100;
-  RODATA:     load = ROM63, type = ro, start = $BA00;
+  RODATA:     load = ROM63, type = ro, start = $B800;
   BFF0:       load = ROM63, type = ro, start = $BFF0;
   PAGERODATA: load = ROM63, type = ro, align = $100;
   CODE:       load = ROM63, type = ro, align = $80;
