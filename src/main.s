@@ -422,10 +422,10 @@ do4:
   lda #>interbank_fetch_buf
   ldx #1
   jsr donut_block_ayx
+  jsr pently_update_lag
   lda donut_stream_ptr+0
   sec
   sbc #<interbank_fetch_buf
-  jsr pently_update_lag
   clc
   rts
 .endproc
