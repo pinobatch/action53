@@ -99,7 +99,7 @@ def compress_block(input_block, prev_block=None, use_bit_flip=True):
     ||||||01-- L planes: 0x00, M planes:  pb8
     ||||||10-- L planes:  pb8, M planes: 0x00
     ||||||11-- All planes: pb8
-    |||||+---- 1: Clear block buffer, 0: XOR with existing block
+    |||||+---- *Deprecated*, always 1
     ||||+----- Rotate plane bits (135° reflection)
     |||+------ L planes predict from 0xff
     ||+------- M planes predict from 0xff
@@ -114,22 +114,12 @@ def compress_block(input_block, prev_block=None, use_bit_flip=True):
         raise ValueError("input block is less then 64 bytes.")
     if input_block == prev_block:
         return b'\xff'
-    if prev_block is not None:
-        if len(prev_block) < 64:
-            raise ValueError("input previous block is less then 64 bytes.")
-        xor_block = bytes( input_block[i] ^ prev_block[i] for i in range(64) )
     cblock_choices = [b'\xfe' + input_block]
-#    for attempt_type in range(0, 0xc0, 4):
-    for attempt_type in [0b00000100, 0b00010100, 0b00100100, 0b00110100,
-                         0b00001100, 0b00011100, 0b00101100, 0b00111100]:
+    for attempt_type in range(0, 0xc0, 8):
         if not use_bit_flip and attempt_type & 0x08:
             continue
-        if attempt_type & 0x04:
-            block = input_block
-        elif prev_block:
-            block = xor_block
-        else:
-            continue
+        attempt_type = attempt_type | 0x04
+        block = input_block
         cblock = [b'']
         plane_def = 0
         for plane_l, plane_m in ((block[i+0:i+8], block[i+8:i+16]) for i in range(0,64,16)):

@@ -52,11 +52,11 @@ plane_predict_by:       .res 1
 plane_predict_by_xor:   .res 1
 is_rotated:             .res 1
 plane_buffer:           .res 8
+plane_toggle:           .res 1
 
 .segment "CODE"
 
 .proc donut_decompress_block
-  sta $4444
   txa
   clc
   adc #64
@@ -86,6 +86,9 @@ plane_buffer:           .res 8
     sta block_header
 
     stx block_offset
+
+    lda #$55
+    sta plane_toggle
 
     lda block_header
     and #$03
@@ -201,9 +204,39 @@ plane_buffer:           .res 8
           asl pb8_ctrl
         bne pb8_loop
       end_plane:
+      asl plane_toggle
+      bcc plane_pair_not_done
+        bit block_header
+        bpl not_xor_l_onto_m
+          sty temp_y
+          ldy #8
+          xor_l_onto_m_loop:
+            dex
+            lda donut_block_buffer, x
+            eor donut_block_buffer+8, x
+            sta donut_block_buffer+8, x
+            dey
+          bne xor_l_onto_m_loop
+          ldy temp_y
+        not_xor_l_onto_m:
+        bvc not_xor_m_onto_l
+          sty temp_y
+          ldy #8
+          xor_m_onto_l_loop:
+            dex
+            lda donut_block_buffer, x
+            eor donut_block_buffer+8, x
+            sta donut_block_buffer, x
+            dey
+          bne xor_m_onto_l_loop
+          ldy temp_y
+        not_xor_m_onto_l:
+      plane_pair_not_done:
       lda block_offset
       cmp block_offset_end
-    bne plane_loop
+    beq plane_loop_skip
+      jmp plane_loop
+    plane_loop_skip:
   end_block:
   sec  ;,; iny   clc
   tya
