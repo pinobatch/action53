@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Version History:
+# 2018-09-29: XORing onto the block buffer is Deprecated.
 # 2018-08-13: Changed the format of raw blocks to not be reversed.
 # 2018-04-30: Initial release.
 
@@ -68,22 +69,34 @@ def pb8_unpack_plane(cplane, top_value=0x00):
     return bytes(plane)
 
 def cblock_cost(cblock):
+    cycles = 0
     block_header = cblock[0]
-    cycle_data = [
-        5353, 5755, 8753, 9159, 5449, 5851, 8757, 9163,
-        5449, 5851, 8757, 9163, 5545, 5947, 8761, 9167,
-        5773, 6175, 9229, 9635, 5869, 6271, 9233, 9639,
-        5925, 6327, 9233, 9639, 6021, 6423, 9237, 9643,
-        5753, 6155, 9209, 9615, 5905, 6307, 9213, 9619,
-        5849, 6251, 9213, 9619, 6001, 6403, 9217, 9623,
-    ]
     if block_header < 0xc0:
-        return len(cblock)*10000 + cycle_data[block_header >> 2]
+        bytes_accounted = 1
+        cycles = 1293
+        if block_header & 0x10:
+            cycles += 1
+        if block_header & 0x20:
+            cycles += 2
+        plane_def = [0x00,0x55,0xaa,0xff][block_header & 0x03]
+        if plane_def == 0x00:
+            plane_def = cblock[1]
+            bytes_accounted += 1
+        pb8_count = bin(plane_def).count("1")
+        bytes_accounted += pb8_count
+        cycles += (len(cblock)-bytes_accounted) * 6
+        if block_header & 0x08:
+            cycles += pb8_count * 616
+        else:
+            cycles += pb8_count * 77
+        if block_header & 0xc0:
+            cycles += 640
     else:
         if block_header & 1:
-            return len(cblock)*10000 + 70
+            cycles = 54
         else:
-            return len(cblock)*10000 + 2118
+            cycles = 2168
+    return len(cblock)*8192 + cycles
 
 def compress_block(input_block, prev_block=None, use_bit_flip=True):
     """Compresses a 64 byte block into a variable length coded block.
