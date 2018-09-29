@@ -15,7 +15,7 @@
 .import interbank_fetch, interbank_fetch_buf
 .import coredump
 .importzp lineImgBufLen
-.exportzp psg_sfx_state
+.export pently_zptemp
 ;.export PB53_outbuf
 ;.exportzp ciSrc, ciBufStart, ciBufEnd
 
@@ -24,6 +24,8 @@
 ; anything that must access data from multiple banks
 .import __LOWCODE_RUN__, __LOWCODE_LOAD__
 .import __LOWCODE_SIZE__
+
+OAM = $0200
 
 .segment "ZEROPAGE"
 nmis:          .res 1
@@ -35,8 +37,9 @@ new_keys:  .res 2
 cur_trigger: .res 1
 
 ; Used by music engine
-psg_sfx_state: .res 32
 tvSystem:   .res 1
+music_nmis: .res 1
+pently_zptemp: .res 5
 
 ; Used by serial byte streams
 ciSrc: .res 2
@@ -79,7 +82,7 @@ ldxinstr:
 .endproc
 
 ; Add this only when copying hex into the patcher
-.if 1
+.if 0
 .segment "CODE"
 .proc patch21
   sei
@@ -214,11 +217,11 @@ copy_LOWCODE:
   has_games:
 
   jsr title_screen
+  lda nmis
+  sta music_nmis
   jsr cart_menu
 
   ; game id is in A
-  ldx #0
-  stx SNDCHN
   pha
   jsr get_titledir_a
   jsr load_titledir_chr_rom
@@ -240,6 +243,8 @@ titleptr = $00
   lda (titleptr),y
   sta start_mappercfg
 
+  ldx #0
+  stx SNDCHN
   jmp start_game
 .endproc
 
@@ -407,11 +412,17 @@ do4:
   sta chrdir_entry_zp
   lda chrdir_entry+1
   sta chrdir_entry_zp+1
+  lda #0
+  sta PPUCTRL
+  bit PPUSTATUS
   jsr interbank_fetch
+  lda #VBLANK_NMI
+  sta PPUCTRL
   ldy #<interbank_fetch_buf
   lda #>interbank_fetch_buf
   ldx #1
   jsr donut_block_ayx
+  jsr pently_update_lag
   lda donut_stream_ptr+0
   sec
   sbc #<interbank_fetch_buf
@@ -452,6 +463,17 @@ no_mouse:
     and cur_trigger
     sty cur_trigger
   no_zapper:
+  rts
+.endproc
+
+.proc pently_update_lag
+  lda nmis
+  cmp music_nmis
+  beq caught_up
+    jsr pently_update
+    inc music_nmis
+    jmp pently_update_lag
+  caught_up:
   rts
 .endproc
 

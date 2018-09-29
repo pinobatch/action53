@@ -133,15 +133,16 @@ MOUSE_LISTENTRY_HEIGHT = 8
   sta screenshot_titleno
   sta zapper_y
 
-  jsr pently_update
+  jsr pently_update_lag
   lda #DRAWS_TABS
   sta draw_step
   lda PAGELIST
   sta tab_data_ptr
   lda PAGELIST+1
   sta tab_data_ptr+1
-  jsr pently_update
+  jsr pently_update_lag
 
+  ; If we decide to put background music in the
 .if 0
   lda #1
   jsr pently_start_music
@@ -174,7 +175,7 @@ forever:
   lda #VBLANK_NMI|BG_1000|OBJ_1000
   sec
   jsr ppu_screen_on
-  jsr pently_update
+  jsr pently_update_lag
   
 ; And the rest of the main loop handles the mouse, Zapper, and
 ; standard controller.  Input from the mouse and the Zapper's
@@ -422,7 +423,8 @@ notB:
   jmp forever
 done:
   jsr pently_stop_music
-  jsr pently_update
+  lda #PE_start_activity
+  jsr pently_start_sound
   lda cur_titleno
   rts  
 .endproc
@@ -755,7 +757,7 @@ clrtxt:
   dey
   bne clrtxt
 
-  jsr pently_update
+  jsr pently_update_lag
 
   ; Now with the tiles set up, we FINALLY get to start
   ; drawing the nametable.

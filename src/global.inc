@@ -1,18 +1,19 @@
-; ram.h
-; Copyright 2012 Damian Yerrick
+; Globals for Action 53
+; Copyright 2012-2018 Damian Yerrick
 ;
 ; Copying and distribution of this file, with or without
 ; modification, are permitted in any medium without royalty provided
 ; the copyright notice and this notice are preserved in all source
 ; code copies.  This file is offered as-is, without any warranty.
-OAM = $0200
 
 ; main.s fields
 .globalzp cur_keys, cur_trigger, new_keys, nmis, tvSystem
 .global linebuf
+.global OAM
 USE_TITLE_MSGS = 0
 ; main.s methods
 .global read_mouse_with_backward_buttons, read_zapper_trigger
+.global pently_update_lag
 
 ; title.s methods
 .global title_screen, no_games_error
