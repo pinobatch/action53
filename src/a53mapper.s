@@ -23,12 +23,14 @@
   ;  $5000 = 0x00 if start_mappercfg & 0x80
   ;          0x01 if start_mappercfg & 0x30
   ;          else 0x81
-
-  ; load_titledir_chr_rom already disabled NMI and rendering
+  sei             ; Disable interrupts
+  ldx #$00
+  stx PPUCTRL
+  stx PPUMASK
 
   ; Copy trampoline code to the end of the stack page with 'pha'
   ; so that the stack pointer ends up on its parameter stack
-  ldx #$ff
+  dex ;,; ldx #$ff
   txs
   lda start_entrypoint+1
   pha

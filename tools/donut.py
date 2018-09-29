@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Version History:
+# 2018-09-29: XORing onto the block buffer is Deprecated.
 # 2018-08-13: Changed the format of raw blocks to not be reversed.
 # 2018-04-30: Initial release.
 
@@ -68,22 +69,34 @@ def pb8_unpack_plane(cplane, top_value=0x00):
     return bytes(plane)
 
 def cblock_cost(cblock):
+    cycles = 0
     block_header = cblock[0]
-    cycle_data = [
-        5353, 5755, 8753, 9159, 5449, 5851, 8757, 9163,
-        5449, 5851, 8757, 9163, 5545, 5947, 8761, 9167,
-        5773, 6175, 9229, 9635, 5869, 6271, 9233, 9639,
-        5925, 6327, 9233, 9639, 6021, 6423, 9237, 9643,
-        5753, 6155, 9209, 9615, 5905, 6307, 9213, 9619,
-        5849, 6251, 9213, 9619, 6001, 6403, 9217, 9623,
-    ]
     if block_header < 0xc0:
-        return len(cblock)*10000 + cycle_data[block_header >> 2]
+        bytes_accounted = 1
+        cycles = 1293
+        if block_header & 0x10:
+            cycles += 1
+        if block_header & 0x20:
+            cycles += 2
+        plane_def = [0x00,0x55,0xaa,0xff][block_header & 0x03]
+        if plane_def == 0x00:
+            plane_def = cblock[1]
+            bytes_accounted += 1
+        pb8_count = bin(plane_def).count("1")
+        bytes_accounted += pb8_count
+        cycles += (len(cblock)-bytes_accounted) * 6
+        if block_header & 0x08:
+            cycles += pb8_count * 616
+        else:
+            cycles += pb8_count * 77
+        if block_header & 0xc0:
+            cycles += 640
     else:
         if block_header & 1:
-            return len(cblock)*10000 + 70
+            cycles = 54
         else:
-            return len(cblock)*10000 + 2118
+            cycles = 2168
+    return len(cblock)*8192 + cycles
 
 def compress_block(input_block, prev_block=None, use_bit_flip=True):
     """Compresses a 64 byte block into a variable length coded block.
@@ -99,7 +112,7 @@ def compress_block(input_block, prev_block=None, use_bit_flip=True):
     ||||||01-- L planes: 0x00, M planes:  pb8
     ||||||10-- L planes:  pb8, M planes: 0x00
     ||||||11-- All planes: pb8
-    |||||+---- 1: Clear block buffer, 0: XOR with existing block
+    |||||+---- *Deprecated*, always 1
     ||||+----- Rotate plane bits (135° reflection)
     |||+------ L planes predict from 0xff
     ||+------- M planes predict from 0xff
@@ -114,20 +127,12 @@ def compress_block(input_block, prev_block=None, use_bit_flip=True):
         raise ValueError("input block is less then 64 bytes.")
     if input_block == prev_block:
         return b'\xff'
-    if prev_block is not None:
-        if len(prev_block) < 64:
-            raise ValueError("input previous block is less then 64 bytes.")
-        xor_block = bytes( input_block[i] ^ prev_block[i] for i in range(64) )
     cblock_choices = [b'\xfe' + input_block]
-    for attempt_type in range(0, 0xc0, 4):
+    for attempt_type in range(0, 0xc0, 8):
         if not use_bit_flip and attempt_type & 0x08:
             continue
-        if attempt_type & 0x04:
-            block = input_block
-        elif prev_block:
-            block = xor_block
-        else:
-            continue
+        attempt_type = attempt_type | 0x04
+        block = input_block
         cblock = [b'']
         plane_def = 0
         for plane_l, plane_m in ((block[i+0:i+8], block[i+8:i+16]) for i in range(0,64,16)):
