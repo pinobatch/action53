@@ -790,11 +790,12 @@ def bmptosb53(infilename, palette, max_tiles=256, trace=False):
              for (t, b) in zip(attrs[0::2], attrs[1::2])]
     namdata.extend(b''.join(attrs))
 
-    compressed_tile_data = donut.compress_multiple_blocks(b''.join(chrdata))
+    compressed_tile_data = list(donut.get_cblocks_from_bytes(b''.join(chrdata), allow_partial=True))
+    compressed_tile_data = (b''.join(compressed_tile_data), len(compressed_tile_data))
     outdata = b''.join([
         bytes([compressed_tile_data[1] & 0xFF]),
         compressed_tile_data[0],
-        donut.compress_multiple_blocks(namdata)[0],
+        donut.compress(namdata),
         palette
     ])
     if trace:
@@ -824,6 +825,15 @@ screenshots is [(pb53_bytes, [color1, color2, color3]), ...]
 screenshot_ids is a list of one index into screenshots for each title
 
 """
+    def compress_screenshot_tiledata(tiledata):
+        for i in range(0, len(tiledata), 96):
+            bg_block = tiledata[i:i+64]
+            fg_mask = b''.join(tiledata[i+p+64:i+p+64+8]+tiledata[i+p+64:i+p+64+8] for p in range(0, 32, 8))
+            fg_block = bytes(t & m for t, m in zip(bg_block, fg_mask))
+            bg_mask = bytes(~m&0xff for m in fg_mask)
+            #print(len(bg_block),len(fg_mask),len(fg_block),len(bg_mask))
+            yield donut.compress_single_block(bg_block, bg_mask)
+            yield donut.compress_single_block(fg_block)
     screenshots = []
     screenshots_by_name = {}
     screenshot_ids = []
@@ -835,9 +845,7 @@ screenshot_ids is a list of one index into screenshots for each title
         except KeyError:
             headerdata, tiledata = load_screenshot(filename)
             scrid = len(screenshots)
-            # hack: add padding to blocks for donut :(
-            tiledata = b''.join(tiledata[i:i+96]+bytes(32) for i in range(0, len(tiledata), 96))
-            ctiledata, number_of_blocks = donut.compress_multiple_blocks(tiledata, use_prev_block=False)
+            ctiledata = b''.join(compress_screenshot_tiledata(tiledata))
             screenshots.append(headerdata+ctiledata)
             screenshots_by_name[filename] = scrid
         screenshot_ids.append(scrid)
@@ -897,8 +905,28 @@ copies tiles from the first.  The first starts from Address, the
 second from (Address + Midpoint).
 
 """
+    def compress_4096_segments(data):
+        def interleave_segments(d):
+            for a, b in ((d[i:i+64], d[i+4096:i+4096+64]) for i in range(0, len(d)//2, 64)):
+                for c in a:
+                    yield c
+                for c in b:
+                    yield c
+        cdata_a = []
+        cdata_b = []
+        odd_block = False
+        for cblock in donut.get_cblocks_from_bytes(interleave_segments(data)):
+            if odd_block:
+                cdata_b.append(cblock)
+            else:
+                cdata_a.append(cblock)
+            odd_block = not odd_block
+        segment_a = b''.join(cdata_a)
+        segment_b = b''.join(cdata_b)
+        return (segment_a + segment_b, [len(segment_a)])
+
     total_unco = sum(len(c) for c in chrbanks)
-    pb53banks = [donut.compress_4096_segments(c) for c in chrbanks]
+    pb53banks = [compress_4096_segments(c) for c in chrbanks]
     del chrbanks
 
     # Insert the CHR banks

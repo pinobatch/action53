@@ -296,11 +296,11 @@ palette -- [c4, c5, c6], [c7, c8, c9]
     for i in range(0, len(tiles01), 4):
         tiledata.extend(tiles01[i:i + 4])
         tiledata.extend(tiles2[i:i + 4])
-    print("tiles01 length is", len(tiles01))
-    print("tiles2 length is", len(tiles2))
+#    print("tiles01 length is", len(tiles01))
+#    print("tiles2 length is", len(tiles2))
     tiledata = b''.join(tiledata)
-    print("header size:", len(header))
-    print("tiledata size:", len(tiledata))
+#    print("header size:", len(header))
+#    print("tiledata size:", len(tiledata))
     return header, tiledata
 
 def render_screenshot(tiles01, tiles2, attrs, palette):

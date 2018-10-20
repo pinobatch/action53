@@ -1506,7 +1506,7 @@ ibflen = $04
   lda desc_data_ptr+1
   sta ibfsrc+1
   ; Pointer to bank number already in $02-$03
-  lda #65+38  ; 38 is the maximum size for a donut block with 2 blank tiles.
+  lda #65+65
   sta ibflen
   jsr interbank_fetch
 
@@ -1514,7 +1514,7 @@ ibflen = $04
   sta donut_stream_ptr+0
   lda #>interbank_fetch_buf
   sta donut_stream_ptr+1
-  ; planes in order 0, 1, 0, 1, 0, 1, 0, 1, 2, 2, 2, 2, -, -, -, -
+  ; 1st block is grayscale background, 2nd is sprite overlay
   ldx #0
   jsr donut_decompress_block
   ;,; ldx #64
@@ -1529,32 +1529,9 @@ ibflen = $04
   inc desc_data_ptr+1
 :
 
-  ; Unpack planes of 10-color screenshot
-tile_rows_left = 0
-;  rts  ; TODO: Remove this once 10-color screenshots are enabled
-
-  ldx #55  ; number of plane 0/1 bytes - size of plane - 1
-  ldy #31  ; number of plane 2 bytes - 1
-  plane2tileloop:
-    lda #8
-    sta tile_rows_left
-    plane2byteloop:
-      lda PB53_outbuf+64,y
-      and PB53_outbuf+8,x
-      sta PB53_outbuf+72,x
-      lda PB53_outbuf+64,y
-      and PB53_outbuf+0,x
-      sta PB53_outbuf+64,x
-      dex
-      dey
-      dec tile_rows_left
-      bne plane2byteloop
-    txa
-    sec
-    sbc #8
-    tax
-    bpl plane2tileloop
   rts
+  ; No need to unpack planes.
+  ; Compressor took care of redundancy in background bits.
 .endproc
 
 .proc blit_step_screenshot
