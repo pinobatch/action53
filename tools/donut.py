@@ -202,13 +202,26 @@ def decompress_single_block(cblock, allow_partial=False):
             is_M_plane = not is_M_plane
     return (bytes(block), bytes_processed)
 
-def fill_dont_care_bits(plane, dont_care_mask=b'\xff'*8, top_value=0x00, bg=b'\x00'*8):
+def fill_dont_care_bits(plane, dont_care_mask=b'\xff'*8, top_value=0x00, xor_bg=b'\x00'*8):
+    if dont_care_mask == b'\xff'*8:
+        return plane
     result_plane = bytearray(8)
+    backwards_smudge_plane = bytearray(8)
     cur_byte = top_value
-    for i in range(7,-1,-1):
+    for i in range(8):
         mask = dont_care_mask[i]
         cur_byte = (plane[i] & mask) | (cur_byte & ~mask)
-        result_plane[i] = (cur_byte & mask) | ((cur_byte ^ bg[i]) & ~mask)
+        backwards_smudge_plane[i] = (cur_byte & mask) | ((cur_byte ^ xor_bg[i]) & ~mask)
+    prev_byte = top_value
+    for i in range(7,-1,-1):
+        new_byte = plane[i]
+        mask = dont_care_mask[i]
+        if new_byte & mask == prev_byte & mask:
+            cur_byte = (new_byte & mask) | (prev_byte & ~mask)
+        else:
+            cur_byte = (new_byte & mask) | (backwards_smudge_plane[i] & ~mask)
+        result_plane[i] = (cur_byte & mask) | ((cur_byte ^ xor_bg[i]) & ~mask)
+        prev_byte = cur_byte
     return bytes(result_plane)
 
 def compress_single_block(block, dont_care_mask=b'\xff'*64, use_bit_flip=True):
@@ -230,9 +243,6 @@ def compress_single_block(block, dont_care_mask=b'\xff'*64, use_bit_flip=True):
             if mask_l != b'\xff'*8 or mask_m != b'\xff'*8:
                 if attempt_type & 0x08:
                     mask_l, mask_m = flip_plane_bits_135(mask_l), flip_plane_bits_135(mask_m)
-                #top_value_xor = top_value_l ^ top_value_m
-                #fill_top_l = top_value_xor if attempt_type & 0x40 else top_value_l
-                #fill_top_m = top_value_xor if attempt_type & 0x80 else top_value_m
                 plane_l = fill_dont_care_bits(plane_l, mask_l, top_value_l)
                 plane_m = fill_dont_care_bits(plane_m, mask_m, top_value_m)
                 if attempt_type & 0x40:
@@ -259,7 +269,10 @@ def compress_single_block(block, dont_care_mask=b'\xff'*64, use_bit_flip=True):
         else:
             cblock[0] = bytes([attempt_type + short_planes_type])
         cblock_result = b''.join(cblock)
-        #assert bytes(i&m for i, m in zip(block, dont_care_mask)) == bytes(i&m for i, m in zip(decompress_single_block(cblock_result)[0], dont_care_mask))
+        if dont_care_mask == b'\xff'*64:
+            assert block == decompress_single_block(cblock_result)[0]
+        else:
+            assert bytes(i&m for i, m in zip(block, dont_care_mask)) == bytes(i&m for i, m in zip(decompress_single_block(cblock_result)[0], dont_care_mask))
         cblock_choices.append(cblock_result)
     result = min(cblock_choices, key=cblock_cost)
     return result
@@ -424,7 +437,7 @@ def main(argv=None):
                         page.clear()
                 else:
                     page = []
-                    for block in get_cblocks_from_bytes(input_file, use_prev_block=(not options.no_prev), use_bit_flip=(not options.no_bit_flip)):
+                    for block in get_cblocks_from_bytes(input_file, use_prev_block=(not options.no_prev), use_bit_flip=(not options.no_bit_flip), allow_partial=True):
                         page.append(block)
                         if len(page) >= 128:
                             output_file.write(b''.join(page))
