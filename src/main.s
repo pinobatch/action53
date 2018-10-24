@@ -47,6 +47,9 @@ ciBufStart: .res 1
 ciBufEnd: .res 1
 PB53_outbuf = $0100
 
+; timer to let "start activity" sfx play for CHR-RAM activities
+min_start_timer: .res 1
+
 .segment "BSS"
 linebuf: .res 40
 ciBlocksLeft = linebuf
@@ -169,6 +172,16 @@ coredump_at_boot_readpad:
   txs  ; Set stack pointer
   cld  ; Turn off decimal mode for post-patent famiclones
 
+  ; Clear zeropage and OAM, to prevent uninitialized reads in nmis, etc.
+  ldy #$00
+  txa ;,; lda #$ff
+  inx ;,; ldx #$00
+  clear_zp_and_oam_loop:
+    sty $00, x
+    sta OAM, x
+    inx
+  bne clear_zp_and_oam_loop
+
   ; Copy the CHR decompression code to RAM.
   .assert __LOWCODE_SIZE__ < 256, error, "LOWCODE too big"
   ldx #0
@@ -221,6 +234,9 @@ copy_LOWCODE:
   sta music_nmis
   jsr cart_menu
 
+  ldy #16
+  sty min_start_timer
+
   ; game id is in A
   pha
   jsr get_titledir_a
@@ -242,6 +258,13 @@ titleptr = $00
   .assert TITLE_ENTRY_POINT + 2 = TITLE_MAPPER_CFG, error, "title dir field order changed"
   lda (titleptr),y
   sta start_mappercfg
+
+  :
+  lda min_start_timer
+  beq :+
+    jsr pently_update_lag
+    jmp :-
+  :
 
   ldx #0
   stx SNDCHN
@@ -273,7 +296,7 @@ num_chr_banks = interbank_fetch_buf+75
   lsr a
   sta cur_chr_bank
   sta PPUMASK
-  sta PPUCTRL
+;  sta PPUCTRL
   ldy #TITLE_CHR_BANK
   lda (titleptr),y
   bpl is_chr_rom  ; CHR bank >= $80 means absent
@@ -472,6 +495,10 @@ no_mouse:
   beq caught_up
     jsr pently_update
     inc music_nmis
+    lda min_start_timer
+    beq :+
+      dec min_start_timer
+    :
     jmp pently_update_lag
   caught_up:
   rts
