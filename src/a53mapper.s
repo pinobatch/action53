@@ -158,26 +158,3 @@ trampoline_code_end:
 trampoline_code_size = trampoline_code_end - trampoline_code_begin
 trampoline_enter = $0200 - ((trampoline_code_end+2) - trampoline_code_begin)
 .endproc
-
-
-.segment "CODE"
-;;
-; Configures the Action 53 mapper to behave like oversize BNROM.
-.proc init_mapper
-  ; Set outer bank to last, so that execution continues across
-  ; change in mapper mode
-  ldx #$81
-  stx $5000
-  lda #$FF
-  sta $8000
-
-  ; Set mapper mode to 32k outer, 32k inner, vertical mirroring
-  lda #$80
-  sta $5000
-  lda #$02
-  sta $8000
-
-  ; Finally, set the current register to outer bank
-  stx $5000
-  rts
-.endproc

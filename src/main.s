@@ -144,6 +144,25 @@ jmp coredump
   lda #$0F
   sta SNDCHN      ; Disable DMC playback, initialize other channels
 
+; Configures the Action 53 mapper to behave like oversize BNROM.
+; inlined here so that coredump can read it's data in $8000~$BFFF
+init_mapper:
+  ; Set outer bank to last, so that execution continues across
+  ; change in mapper mode
+  ldy #$81
+  sty $5000
+  ;,; ldx #$FF
+  stx $8000
+
+  ; Set mapper mode to 32k outer, 32k inner, vertical mirroring
+  lda #$80
+  sta $5000
+  lda #$02
+  sta $8000
+
+  ; Finally, set the current register to outer bank
+  sty $5000
+
 vwait1:
   bit PPUSTATUS   ; It takes one full frame for the PPU to become
   bpl vwait1      ; stable.  Wait for the first frame's vblank.
@@ -192,7 +211,7 @@ copy_LOWCODE:
   cpx #<__LOWCODE_SIZE__
   bne copy_LOWCODE
 
-  jsr init_mapper
+  ;jsr init_mapper  ; inlined above
 
   ; Wait for the second vblank and figure out what TV system we're on.
   ; After this, use only NMI to wait for vblank.
