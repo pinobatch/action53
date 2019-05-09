@@ -107,7 +107,7 @@ tile's color set.
 
 Activities
 ----------
-Each activity has a 16-byte record:
+Each activity has a 32-byte record:
 
 * 1 byte: Starting PRG bank number
 * 1 byte: Starting CHR bank number
@@ -121,6 +121,7 @@ Each activity has a 16-byte record:
 * 2 bytes: Reset vector
 * 1 byte: Mapper configuration
 * 1 byte: Unused
+* 16 bytes: Music player garbage
 
 The total number of activities is the sum of the number of activities
 on all pages.

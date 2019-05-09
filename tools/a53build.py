@@ -1082,19 +1082,21 @@ Number of players
 Description (up to
 16 lines)
 
-So the title directory will have 16 bytes per entry:
+So the title directory will have 32 bytes per entry:
 PRG bank number
 CHR bank number (128+: none; game uses CHR RAM)
 Screenshot number
 Year minus 1970
 Number of players type
-(3 bytes unused)
+Number of CHR banks
+(2 bytes unused)
 2-byte offset to title and author within the name block
 2-byte offset to description within the description block
 2-byte reset vector
 1-byte mapper configuration
 (1 byte unused)
-For 64 entries this is only 1 KiB.
+16-bytes music player garbage
+For 64 entries this is only 2 KiB.
 
 Each entry in the name and description blocks is terminated by a NUL
 byte ('\0').  Each name block entry is a title and author separated
@@ -1155,13 +1157,21 @@ the name block, and the description block.
 ##                  % (title['title'], banksizemask, prgstart))
 ##            raise NotImplementedError
 
+        if "musicplayerdat" in title:
+            musicplayerdat = bytes.fromhex(title['musicplayerdat'])
+            if len(musicplayerdat) != 16:
+                raise ValueError("musicplayerdat must be 16 bytes of hex")
+        else:
+            musicplayerdat = b'# music space! #'
+
         titledir_data = [
             prgstart, chr_starts[i], screenshot_ids[i], year,
             int(players), chr_lengths[i], 0, 0,
             name_offset & 0xFF, name_offset >> 8,
             0, 0,  # reserved for description data
             reset & 0xFF, reset >> 8,
-            mapmode, 0
+            mapmode, 0,
+            *musicplayerdat
         ]
         titledir.extend(titledir_data)
 
@@ -1176,8 +1186,8 @@ the name block, and the description block.
     desc_block = bytearray()
     for i, d in enumerate(descriptions):
         desc_offset = len(desc_block)
-        titledir[i * 16 + 10] = desc_offset & 0xFF
-        titledir[i * 16 + 11] = desc_offset >> 8
+        titledir[i * 32 + 10] = desc_offset & 0xFF
+        titledir[i * 32 + 11] = desc_offset >> 8
         desc_block.extend(d)
         desc_block.append(0)  # NUL terminator
     if trace:
@@ -1220,6 +1230,7 @@ def main(argv=None):
     # Load the config file
     cfgfilename, outfilename = argv[1:3]
     parsed = RomsetParser(filenames=[cfgfilename])
+
     if not parsed.pages:
         raise IndexError("%s: no pages" % (cfgfilename,))
 
@@ -1298,7 +1309,7 @@ def main(argv=None):
     est_dirs_len = (len(chrbanks) * 5
                     + len(set(d.get('screenshot', default_screenshot_filename)
                               for d in titles)) * 3
-                    + 16 * len(titles)
+                    + 32 * len(titles)
                     + sum(len(d['title']) + len(d['author']) + 2
                           for d in titles)
                     + len(title_screen_sb53))

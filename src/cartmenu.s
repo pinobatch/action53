@@ -901,11 +901,13 @@ blankrowatbottomloop:
 ; 2: Screenshot number
 ; 3: Year minus 1970
 ; 4: Number of players type
-; 5-7: unused
+; 5: Number of CHR banks
+; 6-7: unused
 ; 8: 2-byte offset to title and author within the name block
 ; 10: 2-byte offset to description within the description block
 ; 12: 2-byte reset vector
 ; 14-15: unused
+; 16-31: music player garbage
 ; @param A title number
 ; @return pointer in $00-$01
 .proc get_titledir_a
@@ -913,7 +915,7 @@ blankrowatbottomloop:
   lda #$00
   sta 1
   lda 0
-  .repeat 4
+  .repeat 5
   asl a
   rol 1
   .endrepeat
