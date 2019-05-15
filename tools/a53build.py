@@ -24,8 +24,11 @@ DTE_MIN_CODEUNIT = 128
 # Prior to 2018-09-17, the menu's code and data fit in 16K.  With the
 # expansion of Pently, particularly with the addition of portamento,
 # some things had to be moved below $BFF0.
+# 2019-05-15: More then a page(256 bytes) got freed by reducing the
+# the padding in selnow.qdp and by moving the keyblock.
+# reverting back from $B800.
 # This is the first address that the builder's not free to overwrite.
-FINAL_BANK_FREE_END = 0xB800
+FINAL_BANK_FREE_END = 0xBFF0
 
 # Parsing the config file ###########################################
 
@@ -1296,7 +1299,7 @@ def main(argv=None):
     # data and unused list.  This way I can insert objects wherever
     # they'll fit (prgbanks) or into the final bank specifically
     # (final_banks).
-    final_banks = [(final_bank, [(0x8000, FINAL_BANK_FREE_END)])]
+    final_banks = [(final_bank, [(0x8020, FINAL_BANK_FREE_END)])]
     prgbanks.extend(final_banks)
 
     # Create those directories that don't depend on other directories
@@ -1401,7 +1404,7 @@ def main(argv=None):
         print("romdir at $%04x-$%04x, titledir at $%04x-$%04x"
               % (romdir_addr[1], romdir_addr[1] + len(romdir) - 1,
                  titledir_addr[1], titledir_addr[1] + len(titledir) - 1))
-    final_bank[0x7F00:0x7F00 + len(keyblock)] = keyblock
+    final_bank[0x0000:0x0000 + len(keyblock)] = keyblock
 
     if trace:
         print("Allocation of PRG banks")

@@ -301,7 +301,7 @@ CNROM_MAX_SIZE = 4
 ;;
 ; Loads the CHR bank ID associated with this title.
 ; @param $0000 pointer to entry in title directory
-; @param $FF02 pointer to start of CHR directory, where each entry is
+; @param $8002 pointer to start of CHR directory, where each entry is
 ; 5 bytes: PRG bank, address low, high, midpoint offset low, high
 .proc load_titledir_chr_rom
 titleptr = $00

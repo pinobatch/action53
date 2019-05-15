@@ -19,12 +19,12 @@ MEMORY {
 SEGMENTS {
   ZEROPAGE:   load = ZP, type = zp;
   BSS:        load = RAM, type = bss, define = yes, align = $100;
-  RODATA:     load = ROM63, type = ro, start = $BA00;
+  KEYBLOCK:   load = ROM63, type = ro, start = $8000, optional=yes;
   BFF0:       load = ROM63, type = ro, start = $BFF0;
   PAGERODATA: load = ROM63, type = ro, align = $100;
   CODE:       load = ROM63, type = ro, align = $80;
   LOWCODE:    load = ROM63, run = RAM, type = rw, define = yes;
-  KEYBLOCK:   load = ROM63, type = ro, start = $FF00, optional=yes;
+  RODATA:     load = ROM63, type = ro;
   FFF0:       load = ROM63, type = ro, start = $FFF0;
 }
 
