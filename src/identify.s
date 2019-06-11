@@ -6,11 +6,11 @@
 ; This software is provided 'as-is', without any express or implied
 ; warranty.  In no event will the authors be held liable for any damages
 ; arising from the use of this software.
-; 
+;
 ; Permission is granted to anyone to use this software for any purpose,
 ; including commercial applications, and to alter it and redistribute it
 ; freely, subject to the following restrictions:
-; 
+;
 ; 1. The origin of this software must not be misrepresented; you must not
 ;    claim that you wrote the original software. If you use this software
 ;    in a product, an acknowledgment in the product documentation would be
@@ -21,33 +21,19 @@
 ;
 .include "nes.inc"
 .include "global.inc"
+.import wait36k
 
-.bss
+.segment "BSS"
 detected_pads: .res 1
 min4016: .res 1  ; Bitwise minimum of $4016 values over 32 reads
 max4016: .res 1  ; Bitwise maximum of $4016 values over 32 reads
 min4017: .res 1  ; Bitwise minimum of $4017 values over 32 reads
 max4017: .res 1  ; Bitwise maximum of $4017 values over 32 reads
 
-.rodata
+.segment "RODATA"
 one_shl_x: .byte $01, $02, $04, $08, $10, $20, $40, $80
 
-.code
-; Based on allpads-nes/src/openbus.s and allpads-nes/src/identify.s,
-; this detects a a Super NES Mouse in port 1 or a Zapper in port 2.
-; It doesn't attempt to detect an Arkanoid controller or Power Pad
-; because the menu does not support them.
-.proc wait36k
-  ldx #28
-  ldy #0
-waitloop:
-  dey
-  bne waitloop
-  dex
-  bne waitloop
-  rts
-.endproc
-.assert >wait36k = >*, error, "wait36k in identify.s crosses page boundary"
+.segment "CODE"
 
 .proc identify_controllers
 reads9to16 = $02
@@ -156,19 +142,19 @@ triesleft = $05
   sta bitmask
   lda #1
   sta targetspeed
-  
+
   targetloop:
     lda #4
     sta triesleft
 
     tryloop:
-      ; To change the speed, send a clock while strobe is on, 
+      ; To change the speed, send a clock while strobe is on,
       ldy #1
       sty $4016
       lda $4016,x
       dey
       sty $4016
-    
+
       ; Wait and strobe the mouse normally, then skip bits 1-10
       jsr wait36k
       ldx portid

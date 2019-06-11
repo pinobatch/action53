@@ -90,7 +90,7 @@ lastFrameKeys = 4
   sta cur_keys,x
 @notZapperTrigger:
 .endif
-  
+
   lda lastFrameKeys,x   ; A = keys that were down last frame
   eor #$FF              ; A = keys that were up last frame
   and cur_keys,x        ; A = keys down now and up last frame

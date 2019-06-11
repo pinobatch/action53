@@ -103,7 +103,7 @@ copied_end:
 .endproc
 .endif
 
-.segment "CODE"
+.segment "RODATA"
 ;;
 ; This NMI handler is good enough for a simple "has NMI occurred?"
 ; vblank-detect loop, like in Lawn Mower or Thwaite.
@@ -112,6 +112,7 @@ copied_end:
   rti
 .endproc
 
+.segment "CODE"
 ; Action 53 dosn't use IRQ. Use this to catch runaway code that
 ; hits a BRK opcode. This is also currently used to test the
 ; full build by having the dummy ROM image simply execute
@@ -125,7 +126,7 @@ copied_end:
 jmp coredump
 .endproc
 
-; 
+;
 .proc reset
   ; The very first thing to do when powering on is to put all sources
   ; of interrupts into a known state.  But the coredump feature

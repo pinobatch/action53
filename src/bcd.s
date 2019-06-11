@@ -43,4 +43,3 @@ highDigits = $00
   bcd8bit_iter #10
   rts
 .endproc
-

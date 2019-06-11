@@ -13,23 +13,9 @@
 ;
 .p02
 .export getTVSystem
+.import wait1284y
 
-.code
-;;
-; Waits for 1284*y + 5*x cycles + 5 cycles, minus 1284 if x is
-; nonzero, and then reads bit 7 and 6 of the PPU status port.
-; @param X fine period adjustment
-; @param Y coarse period adjustment
-; @return N=NMI status; V=sprite 0 status; X=Y=0; A unchanged
-.proc wait1284y
-  dex
-  bne wait1284y
-  dey
-  bne wait1284y
-  bit $2002
-  rts
-.endproc
-.assert >wait1284y = >*, error, "wait1284y in paldetect.s crosses page boundary"
+.segment "CODE"
 
 ;;
 ; Waits for the PPU to stabilize and returns which TV system
@@ -40,7 +26,7 @@
   ; Pressing Reset during vertical blanking (vblank) on a toploader
   ; leaves NMI unacknowledged, causing vwait1 loop to be skipped.
   ; So acknowledge NMI.
-  bit $2002  
+  bit $2002
 
   ; Wait for the start of vblank at the bottom of a frame.
   ; This may occasionally miss a frame due to a race in the PPU;
@@ -48,7 +34,7 @@
   vwait1:
     bit $2002
     bpl vwait1
-  
+
   ; The PPU is stable at the end of a vblank.  Determining the TV
   ; system takes slightly longer than that: into the post-render
   ; or vblank below the second frame.
@@ -69,7 +55,7 @@
   lda #1
   ldy #3
   jsr wait1284y
-  
+
   ; If another vblank happened by 27 loops, we're on a PAL NES.
   ; Otherwise, we're on a Dendy (PAL famiclone).
   bmi not_dendy

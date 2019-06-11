@@ -7,7 +7,7 @@
   jmp (start_entrypoint)
 .endproc
 
-.code
+.segment "CODE"
 .proc init_mapper
   rts
 .endproc

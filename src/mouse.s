@@ -45,4 +45,3 @@ new_mbuttons: .res 2
   sta $4016
   rts
 .endproc
-

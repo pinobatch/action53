@@ -92,4 +92,3 @@ loop:
     beq :-
   rts
 .endproc
-

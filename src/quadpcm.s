@@ -19,7 +19,7 @@ nextPage:
   lda (ciSrc),y
   sta deEss
   inc ciSrc
-  ; waste some time  
+  ; waste some time
   ldx #3
 pageWaste:
   dex
@@ -89,7 +89,7 @@ endPeriodWait:
   sta $4011
   rts
 .endproc
-.assert >quadpcm_playPages = >*, error, "quadpcm_playPages in quadpcm.s crosses page boundary"
+.assert >quadpcm_playPages = >*, error, "quadpcm_playPages crosses page boundary"
 
 .proc quadpcm_test
   lda #<selnow_qdp
@@ -131,8 +131,8 @@ testdata:
 .endrepeat
 .endif
 
-.rodata
+.segment "RODATA"
 quadpcm_deltas:
   .byt 0,1,4,9,16,25,36,49
   .byt 64,<-49,<-36,<-25,<-16,<-9,<-4,<-1
-.assert >quadpcm_deltas = >*, error, "quadpcm_deltas in quadpcm.s crosses page boundary"
+.assert >quadpcm_deltas = >*, error, "quadpcm_deltas crosses page boundary"

@@ -15,7 +15,7 @@ ciDst: .res 2  ; Moved from unpb53.s as it's only used here.
   sta donut_stream_ptr+1
   lda TITLESCREEN+0
   sta donut_stream_ptr+0
-  
+
   ; Unpack tiles
   ldy #0
   sty PPUMASK
@@ -79,7 +79,7 @@ title_wait_A:
     ldx #0
     jsr read_mouse_with_backward_buttons
   no_mouse:
-  
+
   jsr read_zapper_trigger
   ora new_keys
   and #KEY_START|KEY_A
@@ -157,7 +157,7 @@ str = $00
     clc
     adc total_tiles
     sta total_tiles
-    
+
     tya
     sec
     adc str

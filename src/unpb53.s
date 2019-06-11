@@ -73,7 +73,7 @@ solidColor:
   lsr a
   jsr solidPlane
   jmp tileDone
-  
+
 twoPlanes:
   jsr onePlane
   ldy #0
@@ -173,4 +173,3 @@ copyloop:
   bne loop
   rts
 .endproc
-

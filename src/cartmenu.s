@@ -176,7 +176,7 @@ forever:
   sec
   jsr ppu_screen_on
   jsr pently_update_lag
-  
+
 ; And the rest of the main loop handles the mouse, Zapper, and
 ; standard controller.  Input from the mouse and the Zapper's
 ; trigger is translated into keypresses.
@@ -266,7 +266,7 @@ mouse_no_move:
   iny
   cmp (tab_data_ptr),y
   bcs no_zapper_move
-  
+
   sta cur_titleno
   jsr move_to_page_with_title
 no_zapper_move:
@@ -426,7 +426,7 @@ done:
   lda #PE_start_activity
   jsr pently_start_sound
   lda cur_titleno
-  rts  
+  rts
 .endproc
 
 .proc move_to_page_with_title
@@ -510,7 +510,7 @@ right_page:
   inx
   cpx #32
   bcc :-
-  
+
   ; clear background to black
   lda #$00
   tay
@@ -553,7 +553,7 @@ right_page:
   ; 4. Draw tab headers to nametable.
   ; 5. Draw card including TV frame.
   ; 6. Draw text lines.
-  
+
   ; Attribute table: leftmost 7 units grayscale, rest colored for
   ; 10 lines of text on top and 10 on bottom
   ; 01234567890123456789012345678901
@@ -735,7 +735,7 @@ noprevtabs:
   ldx drawing_tab
   cpx num_pages
   bcc tab_draw_pass
-  
+
   ; End of shit that could (should?) have been done statically
   ; in Python
 
@@ -848,7 +848,7 @@ tvloop:
   stx PPUDATA
   inx
   stx PPUDATA
-  
+
   ; now we have the left half of this row of the card done;
   ; the rest is the text half
   lda draw_progress
@@ -936,7 +936,7 @@ waits0_off:
 waits0_on:
   bit PPUSTATUS
   beq waits0_on
-  
+
   lda #VBLANK_NMI|OBJ_1000|BG_0000
   sta PPUCTRL
   rts
@@ -947,7 +947,7 @@ waits0_on:
 ; draw_step and draw_progress.
 .proc draw_step_dispatch
   ldx draw_step
-  
+
   ; If the Zapper is present, run measure_zapper more often
   lda detected_pads
   and #DETECT_2P_ZAPPER
@@ -1210,7 +1210,7 @@ blit_step_arrow = blit_step_tabborder::arrow_only
   iny
   cmp (tab_data_ptr),y
   bcs past_last_title_on_page
-  
+
   jsr get_titledir_a
 have_titledir:
   lda #MAX_LINES
@@ -1247,7 +1247,7 @@ line_ready:
 
 .proc blit_step_vwf
   lda draw_progress
-  
+
   ; are we finished writing this page's text?
   cmp num_lines_on_page
   bcs done_writing_new_text
@@ -1258,7 +1258,7 @@ line_ready:
   inc prev_lines_on_page
   bne not_last_row
 
-done_writing_new_text:  
+done_writing_new_text:
   ; are we finished clearing out the previous page's text?
   cmp prev_lines_on_page
   bcc not_last_row
@@ -1266,10 +1266,10 @@ done_writing_new_text:
   sty prev_lines_on_page
   ldy #DRAWS_ARROW
   sty draw_step
-  
+
   ; 2014-05-24: Was trying to write a 21st line of text,
   ; corrupting part of the screenshot
-  jmp blit_step_arrow  
+  jmp blit_step_arrow
 
 not_last_row:
   ldy #$00
@@ -1463,7 +1463,7 @@ ibflen = $04
     ora #$80
     sta screenshot_titleno
     jsr hide_screenshot
-    
+
     ; Seek to the screenshot's header
     ldy #1
     lda (screenshotent),y
@@ -1592,7 +1592,7 @@ do2planes:
   sta PPUADDR
   lda dstlo
   sta PPUADDR
-  
+
   .assert <SCREENSHOT_BASE_ADDR = 0, error, "screenshot base must be 16 tile aligned"
   clc
 loop:
@@ -1737,7 +1737,7 @@ tv_rows:  ; Offsets into tv_shape for each row of the screen
   .byt 0, 10, 10, 20, 20, 20, 10, 10, 30, 40
 row_below_tv:
   .byt 50  ; Last element for rows below the TV
-  
+
 card_attrtable:
   .byt $A0,$AA,$AA,$FF,$FF,$0F
 

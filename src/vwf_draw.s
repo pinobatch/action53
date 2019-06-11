@@ -131,7 +131,7 @@ isBlankByte:
   rts
 
 ; If you get this error, go up to "adjust shiftslide"
-  .assert >shiftslide = >dontshift, error, "shiftslide in vwf_draw.s crosses page boundary"
+  .assert >shiftslide = >dontshift, error, "shiftslide in vwfPutTile crosses page boundary"
 
 
 .pushseg
@@ -249,7 +249,7 @@ done0:
   tay
   lda #0
   adc srcStr+1
-  ldx horzPos 
+  ldx horzPos
   rts
 .endproc
 

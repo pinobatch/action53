@@ -3,15 +3,15 @@
 # Sample songs
 #
 # Copyright 2001-2018 Damian Yerrick
-# 
+#
 # This software is provided 'as-is', without any express or implied
 # warranty.  In no event will the authors be held liable for any damages
 # arising from the use of this software.
-# 
+#
 # Permission is granted to anyone to use this software for any purpose,
 # including commercial applications, and to alter it and redistribute it
 # freely, subject to the following restrictions:
-# 
+#
 # 1. The origin of this software must not be misrepresented; you must not
 #    claim that you wrote the original software. If you use this software
 #    in a product, an acknowledgment in the product documentation would be
@@ -83,7 +83,7 @@ song attacktest
   time 12/4
   scale 8
   tempo 85.9
-  # This is technically in New Jack Swing time, where the second 
+  # This is technically in New Jack Swing time, where the second
   # division is compound instead of the first, but there's no
   # classical time sig for NJS.  So instead, we choose a time
   # signature that forces the correct beat length (dotted half).
@@ -120,4 +120,3 @@ song attacktest
   at 5
   fine
 #  da capo
-

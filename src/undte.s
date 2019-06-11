@@ -9,7 +9,7 @@
 
 DTE_MIN_CODEUNIT = 128
 
-.code
+.segment "CODE"
 .proc undte_line
 srcaddr = $00
   sty srcaddr
