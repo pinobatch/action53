@@ -4,7 +4,6 @@ ciBlocksLeft = ciBufEnd
 .export quadpcm_test, quadpcm_playPages
 
 .segment "CODE"
-.align 128
 .proc quadpcm_playPages
 ciBits = 2
 thisSample = 3
@@ -90,6 +89,7 @@ endPeriodWait:
   sta $4011
   rts
 .endproc
+.assert >quadpcm_playPages = >*, error, "quadpcm_playPages in quadpcm.s crosses page boundary"
 
 .proc quadpcm_test
   lda #<selnow_qdp
@@ -102,7 +102,10 @@ endPeriodWait:
 .endproc
 
 .segment "PAGERODATA"
-.align 256
+selnow_qdp:
+  .incbin "obj/nes/selnow.qdp"
+selnow_qdp_end:
+
 .if 0
 testdata:
 .repeat 2, I
@@ -128,13 +131,8 @@ testdata:
 .endrepeat
 .endif
 
-selnow_qdp:
-  .incbin "obj/nes/selnow.qdp"
-selnow_qdp_end:
-
 .rodata
-.align 16
 quadpcm_deltas:
   .byt 0,1,4,9,16,25,36,49
   .byt 64,<-49,<-36,<-25,<-16,<-9,<-4,<-1
-
+.assert >quadpcm_deltas = >*, error, "quadpcm_deltas in quadpcm.s crosses page boundary"

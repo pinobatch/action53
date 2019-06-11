@@ -20,7 +20,7 @@ cfgversion := page1
 # PRG ROM.  If it gets too long for one line, you can add a backslash
 # (the \ character) at the end of the line and continue on the next.
 objlist := \
-  quadpcm vwf7 zapkernels identify vwf_draw \
+  identify vwf_draw quadpcm vwf7 zapkernels \
   a53mapper main title cartmenu coredump  donut \
   interbank_fetch bcd pads mouse ppuclear paldetect undte \
   pentlysound pentlymusic

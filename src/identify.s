@@ -37,7 +37,6 @@ one_shl_x: .byte $01, $02, $04, $08, $10, $20, $40, $80
 ; this detects a a Super NES Mouse in port 1 or a Zapper in port 2.
 ; It doesn't attempt to detect an Arkanoid controller or Power Pad
 ; because the menu does not support them.
-.align 16
 .proc wait36k
   ldx #28
   ldy #0
@@ -48,6 +47,7 @@ waitloop:
   bne waitloop
   rts
 .endproc
+.assert >wait36k = >*, error, "wait36k in identify.s crosses page boundary"
 
 .proc identify_controllers
 reads9to16 = $02

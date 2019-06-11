@@ -20,7 +20,6 @@
 
 .export zapkernel_yonoff_ntsc
 
-.align 128
 ;;
 ; @param Y number of scanlines to watch
 ; @return 0: number of lines off, 1: number of lines on
@@ -117,3 +116,5 @@ bail:
 waste_12:
   rts
 .endproc
+
+.assert >zapkernel_yonoff_ntsc = >*, error, "zapkernel.s crosses page boundary"

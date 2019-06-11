@@ -67,7 +67,7 @@ rightMask = $0B
   sta tileAddr
 .endmacro
 
-.res 1  ; 1 or 32 to adjust shiftslide
+;.res 1  ; 1 or 32 to adjust shiftslide
 
 ;;
 ; Puts a 1-bit tile to position X in the line image buffer.
@@ -131,7 +131,7 @@ isBlankByte:
   rts
 
 ; If you get this error, go up to "adjust shiftslide"
-  .assert >shiftslide = >dontshift, error, "shiftslide crosses page boundary"
+  .assert >shiftslide = >dontshift, error, "shiftslide in vwf_draw.s crosses page boundary"
 
 
 .pushseg

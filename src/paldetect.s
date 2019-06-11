@@ -15,7 +15,6 @@
 .export getTVSystem
 
 .code
-.align 8
 ;;
 ; Waits for 1284*y + 5*x cycles + 5 cycles, minus 1284 if x is
 ; nonzero, and then reads bit 7 and 6 of the PPU status port.
@@ -30,6 +29,7 @@
   bit $2002
   rts
 .endproc
+.assert >wait1284y = >*, error, "wait1284y in paldetect.s crosses page boundary"
 
 ;;
 ; Waits for the PPU to stabilize and returns which TV system

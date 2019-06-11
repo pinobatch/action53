@@ -22,7 +22,7 @@ SEGMENTS {
   KEYBLOCK:   load = ROM63, type = ro, start = $8000, optional=yes;
   BFF0:       load = ROM63, type = ro, start = $BFF0;
   PAGERODATA: load = ROM63, type = ro, align = $100;
-  CODE:       load = ROM63, type = ro, align = $80;
+  CODE:       load = ROM63, type = ro;
   LOWCODE:    load = ROM63, run = RAM, type = rw, define = yes;
   RODATA:     load = ROM63, type = ro;
   FFF0:       load = ROM63, type = ro, start = $FFF0;
