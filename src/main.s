@@ -81,7 +81,7 @@ ldxinstr:
   nop
   stx ldxinstr+1
   jmp ($FFFC)
-  .addr nmi, reset, irq
+  .addr $01fd, reset, irq
 .endproc
 
 ; Add this only when copying hex into the patcher
@@ -201,6 +201,13 @@ coredump_at_boot_readpad:
     sta OAM, x
     inx
   bne clear_zp_and_oam_loop
+
+  ldx #3-1
+  load_nmi_routine:
+    lda nmi, x
+    pha
+    dex
+  bpl load_nmi_routine
 
   ; Copy the CHR decompression code to RAM.
   .assert __LOWCODE_SIZE__ < 256, error, "LOWCODE too big"
