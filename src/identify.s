@@ -23,7 +23,7 @@
 .include "global.inc"
 .import wait36k
 
-.segment "BSS"
+.segment "ZEROPAGE"
 detected_pads: .res 1
 min4016: .res 1  ; Bitwise minimum of $4016 values over 32 reads
 max4016: .res 1  ; Bitwise maximum of $4016 values over 32 reads

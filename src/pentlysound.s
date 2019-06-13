@@ -29,7 +29,7 @@
 .if PENTLY_USE_PAL_ADJUST
   .importzp tvSystem
 .endif
-.export pentlyBSS
+.exportzp pentlyBSS
 .exportzp pently_zp_state
 
 .assert (pently_zptemp + 5) <= $100, error, "pently_zptemp must be within zero page"
@@ -53,7 +53,7 @@ NOISE_CH = $0C
 pently_zp_state: .res PENTLYZP_SIZE
 sfx_datalo = pently_zp_state + 0
 sfx_datahi = pently_zp_state + 1
-.bss
+;.bss
 
 ; The statically allocated prefix of pentlyBSS
 pentlyBSS: .res 18

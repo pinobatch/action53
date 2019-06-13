@@ -27,7 +27,7 @@
 .include "../obj/nes/pentlybss.inc"
 
 .importzp pently_zp_state
-.import pentlyBSS
+.importzp pentlyBSS
 .import periodTableLo, periodTableHi
 .export pently_update_music, pently_update_music_ch
 
@@ -89,7 +89,7 @@ musicPatternPos = pently_zp_state + 2
 .endif
 
 
-.bss
+.zeropage
 ; Statically allocated so as not to be cleared by the clear loop
 conductorSegnoLo        = pentlyBSS + 16
 conductorSegnoHi        = pentlyBSS + 17

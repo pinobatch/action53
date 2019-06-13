@@ -54,7 +54,7 @@ tab_data_ptr: .res 2
 ; accessed.
 desc_data_ptr: .res 2
 
-.segment "BSS"
+.segment "ZEROPAGE"
 tab_tilelens: .res MAX_TABS
 tab_xoffsets: .res MAX_TABS
 tab_title_offsets: .res MAX_TABS

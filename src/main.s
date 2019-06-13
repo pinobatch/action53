@@ -25,7 +25,8 @@
 .import __LOWCODE_RUN__, __LOWCODE_LOAD__
 .import __LOWCODE_SIZE__
 
-OAM = $0200
+.segment "OAM"
+OAM:            .res 256
 
 .segment "ZEROPAGE"
 nmis:          .res 1
@@ -50,9 +51,9 @@ PB53_outbuf = $0100
 ; timer to let "start activity" sfx play for CHR-RAM activities
 min_start_timer: .res 1
 
-.segment "BSS"
-linebuf: .res 40
-ciBlocksLeft = linebuf
+load_titledir_chr_rom_chrdir_entry: .res 2
+load_titledir_chr_rom_cur_chr_bank: .res 1
+load_titledir_chr_rom_num_chr_banks: .res 1
 
 .if 0
 .segment "INESHDR"
@@ -141,7 +142,7 @@ jmp coredump
   bit PPUSTATUS   ; Acknowledge stray vblank NMI across reset
   bit SNDCHN      ; Acknowledge DMC IRQ
   lda #$40
-  sta P2          ; Disable APU Frame IRQ
+  sta $4017       ; Disable APU Frame IRQ
   lda #$0F
   sta SNDCHN      ; Disable DMC playback, initialize other channels
 
@@ -183,10 +184,19 @@ coredump_at_boot_readpad:
     tay
   bcc @readpad_loop
   ; A = Y = pad2
-  cpy #%11000000
-  bne @not_coredump
+  cpy #KEY_A|KEY_B
+  bne not_coredump
+    ; since getTVSystem contains at least 2 frames of vblank waiting
+    ; vwait1 is moved here as only coredump needs it.
+    vwait1:
+      bit PPUSTATUS   ; It takes one full frame for the PPU to become
+    bpl vwait1      ; stable.  Wait for the first frame's vblank.
     jmp coredump
-  @not_coredump:
+  not_coredump:
+;  cpy #KEY_SELECT|KEY_START|KEY_UP|KEY_LEFT
+;  bne @not_cart_check
+;    ; in the database there's a CRC16 for every 16KiB (256 bytes for all crc16 sums)
+;  not_cart_check:
 
   ; Now that we know we're not running coredump:
   txs  ; Set stack pointer
@@ -210,14 +220,28 @@ coredump_at_boot_readpad:
   bpl load_nmi_routine
 
   ; Copy the CHR decompression code to RAM.
-  .assert __LOWCODE_SIZE__ < 256, error, "LOWCODE too big"
-  ldx #0
 copy_LOWCODE:
-  lda __LOWCODE_LOAD__,x
-  sta __LOWCODE_RUN__,x
-  inx
-  cpx #<__LOWCODE_SIZE__
-  bne copy_LOWCODE
+  lda #<__LOWCODE_LOAD__
+  sta $00
+  lda #>__LOWCODE_LOAD__
+  sta $01
+  lda #<__LOWCODE_RUN__
+  sta $02
+  lda #>__LOWCODE_RUN__
+  sta $03
+
+  ldy #0
+  ldx #(>(__LOWCODE_SIZE__-1))+1
+  copy_LOWCODE_pages:
+    copy_LOWCODE_pages_inner_loop:
+      lda ($00), y
+      sta ($02), y
+      iny
+    bne copy_LOWCODE_pages_inner_loop
+    inc $00+1
+    inc $02+1
+    dex
+  bne copy_LOWCODE_pages
 
   ;jsr init_mapper  ; inlined above
 
@@ -269,7 +293,8 @@ copy_LOWCODE:
   jsr get_titledir_a
   jsr load_titledir_chr_rom
   ldx #0
-  jsr ppu_clear_oam  ; Clear OAM because Snail Maze Game doesn't
+  ; jsr ppu_clear_oam  ; Clear OAM because Snail Maze Game doesn't
+  ; no point as ram gets cleared at start_game
   pla
 
   ; CHR data is loaded.
@@ -301,11 +326,6 @@ titleptr = $00
 .importzp ciSrc0, ciSrc1
 .import interbank_fetch, interbank_fetch_buf
 
-; Temporary measure during debugging to keep Sinking Feeling-only ROM
-; from reading off the end.  Once this is working, I'll try adding
-; the CHR ROM size to the title directory.
-CNROM_MAX_SIZE = 4
-
 ;;
 ; Loads the CHR bank ID associated with this title.
 ; @param $0000 pointer to entry in title directory
@@ -314,9 +334,9 @@ CNROM_MAX_SIZE = 4
 .proc load_titledir_chr_rom
 titleptr = $00
 chrdir_entry_zp = $02  ; matches interbank_fetch bank ptr
-chrdir_entry = interbank_fetch_buf+72
-cur_chr_bank = interbank_fetch_buf+74
-num_chr_banks = interbank_fetch_buf+75
+chrdir_entry = load_titledir_chr_rom_chrdir_entry
+cur_chr_bank = load_titledir_chr_rom_cur_chr_bank
+num_chr_banks = load_titledir_chr_rom_num_chr_banks
 
   lda #1
   sta num_chr_banks
@@ -405,7 +425,7 @@ loop:
   sta 0
   lda ciSrc0+1
   sta 1
-  jsr do4
+  jsr load_titledir_chr_rom_do4
   adc ciSrc0
   sta ciSrc0
   bcc :+
@@ -427,7 +447,7 @@ loop:
   sta 0
   lda ciSrc1+1
   sta 1
-  jsr do4
+  jsr load_titledir_chr_rom_do4
   adc ciSrc1
   sta ciSrc1
   bcc :+
@@ -451,13 +471,70 @@ loop:
     jmp nextbank
   no_more_chr_banks:
   rts
+.endproc
 
+.segment "LOWCODE"
+.proc load_titledir_chr_rom_do4
+chrdir_entry_zp = $02  ; matches interbank_fetch bank ptr
+chrdir_entry = load_titledir_chr_rom_chrdir_entry
+  lda chrdir_entry
+  sta chrdir_entry_zp
+  lda chrdir_entry+1
+  sta chrdir_entry_zp+1
+  ldy #0
+  sty PPUCTRL
+  bit PPUSTATUS
+  lda ($02), y
+  sta ($02), y
+  lda ($00), y
+  cmp #$2a
+  bne continue_normal_block
+    raw_block_loop:
+      iny
+      lda ($00), y
+      sta PPUDATA
+      cpy #65  ; size of a raw block
+    bcc raw_block_loop
+    lda #$ff
+    sta $8000   ; forget about the whole bus conflict thing for now
+    lda #VBLANK_NMI
+    sta PPUCTRL
+  bcs block_done
+  continue_normal_block:
+    ldy $00
+    sty donut_stream_ptr+0
+    lda $01
+    sta donut_stream_ptr+1
+    ldx #64
+    jsr donut_decompress_block
+    ldx #64
+    upload_loop:
+      lda donut_block_buffer, x
+      sta PPUDATA
+      inx
+    bpl upload_loop
+    lda #$ff
+    sta $8000   ; forget about the whole bus conflict thing for now
+    lda #VBLANK_NMI
+    sta PPUCTRL
+  block_done:
+  sty donut_block_count  ; a safe temp var to store the returned bytes read
+  jsr pently_update_lag
+  lda donut_block_count
+  clc
+rts
+.endproc
+
+.if 0
+.segment "CODE"
 ;;
 ; @param A start of buffer (0 or 64)
 ; @return A number of compressed bytes read
-do4:
+.proc load_titledir_chr_rom_do4_old
+chrdir_entry_zp = $02  ; matches interbank_fetch bank ptr
+chrdir_entry = load_titledir_chr_rom_chrdir_entry
   lda #65  ; block of 4 tiles, max 64 + 1 bytes
-  sta 4
+  sta $04
   lda chrdir_entry
   sta chrdir_entry_zp
   lda chrdir_entry+1
@@ -479,6 +556,7 @@ do4:
   clc
   rts
 .endproc
+.endif
 
 ;;
 ; Reads a mouse and maps presses of L to A and R to B

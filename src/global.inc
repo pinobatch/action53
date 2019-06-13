@@ -8,7 +8,6 @@
 
 ; main.s fields
 .globalzp cur_keys, cur_trigger, new_keys, nmis, tvSystem
-.global linebuf
 .global OAM
 USE_TITLE_MSGS = 0
 ; main.s methods
@@ -26,8 +25,8 @@ start_mappercfg  = $02  ; Mapper configuration byte for this activity
 .global init_mapper, start_game
 
 ; cartmenu.s fields
-.global draw_progress
-.global tab_tilelens  ; reused as locals for draw_title_strings
+.globalzp draw_progress
+.globalzp tab_tilelens  ; reused as locals for draw_title_strings
 ; cartmenu.s methods
 .global cart_menu, get_titledir_a
 
@@ -84,7 +83,7 @@ dte_output_buf = interbank_fetch_buf + 128
 DETECT_2P_ZAPPER = $08
 DETECT_1P_MOUSE = $01
 ; identify.s fields
-.global detected_pads
+.globalzp detected_pads
 ; identify.s methods
 .global identify_controllers
 

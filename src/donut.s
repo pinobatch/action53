@@ -32,13 +32,13 @@ donut_block_buffer = $0100  ; 64 bytes
 donut_stream_ptr:       .res 2
 donut_block_count:      .res 1
 
-.segment "CODE"
+.segment "LOWCODE"
 
 ;;
 ; Decompresses a single variable sized block pointed to by donut_stream_ptr
 ; Outputing 64 bytes to donut_block_buffer offsetted by the X register.
-; On success, 64 will be added to the X register, and donut_block_count
-; will be decremented.
+; On success, 64 will be added to the X register, donut_block_count
+; will be decremented, and Y will contain the number of bytes read.
 ;
 ; Block header:
 ; LMlmbbBR
@@ -77,13 +77,13 @@ block_offset_end    = temp+12
 block_header        = temp+13
 is_rotated          = temp+14
 ;_donut_unused_temp  = temp+15
+  ldy #$00
   txa
   clc
   adc #64
   bcs exit_error
   sta block_offset_end
 
-  ldy #$00
   lda (donut_stream_ptr), y
   iny  ; Reading input bytes are now post-increment.
 
@@ -121,7 +121,7 @@ do_raw_block:
     inx
     cpy #65  ; size of a raw block
   bcc raw_block_loop
-  sty temp_y
+;  sty temp_y
 bcs end_block  ;,; jmp end_block
 
 continue_normal_block:
@@ -202,10 +202,10 @@ continue_normal_block:
     sty temp_y
   ;,; beq end_plane  ;,; jmp end_plane
   end_plane:
+    ldy #8
     bit even_odd
     bpl not_xor_m_onto_l
     xor_m_onto_l:
-      ldy #8
       xor_m_onto_l_loop:
         dex
         lda donut_block_buffer, x
@@ -217,7 +217,6 @@ continue_normal_block:
 
     bvc not_xor_l_onto_m
     xor_l_onto_m:
-      ldy #8
       xor_l_onto_m_loop:
         dex
         lda donut_block_buffer, x
@@ -230,10 +229,11 @@ continue_normal_block:
     lda block_offset
     cmp block_offset_end
   bcc plane_loop
+  ldy temp_y
 end_block:
   ;,; sec
   clc
-  lda temp_y
+  tya ;lda temp_y
   adc donut_stream_ptr+0
   sta donut_stream_ptr+0
   bcc add_stream_ptr_no_inc_high_byte
@@ -290,6 +290,8 @@ do_rotated_pb8_plane:
   bne flip_bits_loop
 beq end_plane  ;,; jmp end_plane
 .endproc
+
+.segment "CODE"
 
 ;;
 ; helper subroutine for passing parameters with registers
