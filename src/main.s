@@ -122,9 +122,20 @@ copied_end:
   pha
   txa
   pha
-  tya
-  pha
-jmp coredump
+  tsx
+  lda $0103, x
+  and #$10
+  beq ack_apu_frame_counter
+    tya
+    pha
+  jmp coredump
+  ack_apu_frame_counter:
+  pla
+  tax
+  pla
+  bit $4015
+  inc nmis
+rti
 .endproc
 
 ;
@@ -164,10 +175,6 @@ init_mapper:
 
   ; Finally, set the current register to outer bank
   sty $5000
-
-vwait1:
-  bit PPUSTATUS   ; It takes one full frame for the PPU to become
-  bpl vwait1      ; stable.  Wait for the first frame's vblank.
 
 coredump_at_boot_readpad:
   ldy #$01
@@ -285,8 +292,15 @@ copy_LOWCODE:
   sta music_nmis
   jsr cart_menu
 
-  ldy #16
-  sty min_start_timer
+  ldx #16
+  stx min_start_timer
+  ; Switch over to using APU Frame IRQ for timming
+  ; due to donut_decompress_block exceeding a vblank of time.
+  ldx #$00
+  stx PPUCTRL
+  stx PPUMASK
+  stx $4017
+  cli
 
   ; game id is in A
   pha
@@ -342,8 +356,6 @@ num_chr_banks = load_titledir_chr_rom_num_chr_banks
   sta num_chr_banks
   lsr a
   sta cur_chr_bank
-  sta PPUMASK
-;  sta PPUCTRL
   ldy #TITLE_CHR_BANK
   lda (titleptr),y
   bpl is_chr_rom  ; CHR bank >= $80 means absent
@@ -481,9 +493,8 @@ chrdir_entry = load_titledir_chr_rom_chrdir_entry
   sta chrdir_entry_zp
   lda chrdir_entry+1
   sta chrdir_entry_zp+1
+  sei
   ldy #0
-  sty PPUCTRL
-  bit PPUSTATUS
   lda ($02), y
   sta ($02), y
   lda ($00), y
@@ -495,10 +506,6 @@ chrdir_entry = load_titledir_chr_rom_chrdir_entry
       sta PPUDATA
       cpy #65  ; size of a raw block
     bcc raw_block_loop
-    lda #$ff
-    sta $8000   ; forget about the whole bus conflict thing for now
-    lda #VBLANK_NMI
-    sta PPUCTRL
   bcs block_done
   continue_normal_block:
     ldy $00
@@ -513,11 +520,10 @@ chrdir_entry = load_titledir_chr_rom_chrdir_entry
       sta PPUDATA
       inx
     bpl upload_loop
-    lda #$ff
-    sta $8000   ; forget about the whole bus conflict thing for now
-    lda #VBLANK_NMI
-    sta PPUCTRL
   block_done:
+  lda #$ff
+  sta $8000   ; forget about the whole bus conflict thing for now
+  cli
   sty donut_block_count  ; a safe temp var to store the returned bytes read
   jsr pently_update_lag
   lda donut_block_count
