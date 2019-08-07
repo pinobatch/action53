@@ -24,8 +24,8 @@ SEGMENTS {
   RODATA:     load = ROM63, type = ro;
   CODE:       load = ROM63, type = ro;
   OAM:        load = RAM, type = bss, define = yes, align = $100;
-  LOWCODE:    load = ROM63, run = RAM, type = rw, define = yes;
-  BSS:        load = RAM, type = bss, define = yes;
+  LOWCODE:    load = ROM63, run = RAM, type = rw, define = yes, align = $100;
+  BSS:        load = RAM, type = bss, define = yes, align = $100;
   FFF0:       load = ROM63, type = ro, start = $FFF0;
 }
 

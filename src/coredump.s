@@ -8,6 +8,10 @@
 ;
 ;   This file is offered as-is, without any warranty.
 
+; 2019-08-05: Version 1.6
+;   - Removed Serifs from font for reability (and compression).
+;   - Added ability to only setup gfx as a subroutine.
+;   - 411 bytes code + 128 bytes chr data + 8 bytes sfx data.
 ; 2018-05-26: Version 1.5:
 ;   - Rewrite, with vastly diffrent tricks from previous versions.
 ;   - Compressed font.
@@ -107,6 +111,7 @@ JOY_PORT_2      = $4017
   BUTTON_RIGHT     = %00000001
 
 .export coredump
+.export coredump_load_gfx
 
 .segment "CODE"
 .proc coredump
@@ -125,11 +130,16 @@ hardware_init:
   inx  ;,; ldx #$01
   stx APU_SND_CHN
   ; Wait for video to stop rendering
-  lda PPU_STATUS
+  bit PPU_STATUS
   @__loop:
-    lda PPU_STATUS
+    bit PPU_STATUS
   bpl @__loop
+  ; this should leave the V flag cleared
 
+;;
+; if external code is calling this as a subroutine
+; the following MUST be set
+; X = $01, Y = $40, V = set
 set_palette:
   dey  ;,; ldy #$3f
   sty PPU_ADDR
@@ -198,12 +208,18 @@ clear_nametable:
     inx
   bne @__loop2
 
-  ; Y = State var, 000xyyyz,
-  ;   x: button was pressed last frame
-  ;   y: page number
-  ;   z: half page
-  ;,; ldy #%00000000
+  ; nothing above (not even cpx) uses the V flag, we can add in this hack
+  ; to allow external code to use gfx seting parts as a subroutine.
+  bvc refresh_screen
+rts
 
+;;
+; The main loop.
+; Y = State var, 000xyyyz,
+;   x: button was pressed last frame
+;   y: page number
+;   z: half page
+;,; ldy #%00000000
 refresh_screen:
   ;,; ldx #$00
 save_ram_in_NT:
@@ -441,22 +457,24 @@ turn_off_screen:
 jmp refresh_screen
 .endproc
 
+coredump_load_gfx = coredump::set_palette
+
 .segment "RODATA"
 
 coredump_font:
   .byte %11000011, $38,$6c,                $38     ; 0
-  .byte %11100001, $18,$38,$18                     ; 1
-  .byte %11111111, $38,$6c,$0c,$38,$60,$6c,$7c     ; 2
-  .byte %11111111, $38,$6c,$0c,$38,$0c,$6c,$38     ; 3
+  .byte %10000001, $18                             ; 1
+  .byte %11011011, $78,$0c,    $38,$60,    $7c     ; 2
+  .byte %11011011, $78,$0c,    $38,$0c,    $78     ; 3
   .byte %10011001, $6c,        $7c,$0c             ; 4
-  .byte %11111111, $7c,$6c,$60,$78,$0c,$6c,$38     ; 5
-  .byte %11111011, $38,$6c,$60,$78,$6c,    $38     ; 6
-  .byte %11010001, $7c,$6c,    $0c                 ; 7
+  .byte %11011011, $7c,$60,    $78,$0c,    $78     ; 5
+  .byte %11011011, $38,$60,    $78,$6c,    $38     ; 6
+  .byte %11000001, $7c,$0c                         ; 7
   .byte %11011011, $38,$6c,    $38,$6c,    $38     ; 8
-  .byte %11011111, $38,$6c,    $3c,$0c,$6c,$38     ; 9
+  .byte %11011011, $38,$6c,    $3c,$0c,    $38     ; 9
   .byte %11011001, $3c,$66,    $7e,$66             ; A
   .byte %11011011, $7c,$66,    $7c,$66,    $7c     ; B
-  .byte %11100111, $3c,$66,$60,        $66,$3c     ; C
+  .byte %11000011, $3e,$60,                $3e     ; C
   .byte %11100111, $78,$6c,$66,        $6c,$78     ; D
   .byte %11011011, $7e,$60,    $7e,$60,    $7e     ; E
   .byte %11011001, $7e,$60,    $78,$60             ; F
@@ -477,6 +495,11 @@ coredump_font:
   .byte %00000001                                  ; space
   .byte %00000001                                  ; space
   .byte %00000001                                  ; space
+; Extra characters for checksum app
+  .byte %01110111,     $24,$7e,$24,    $7e,$24     ; #
+  .byte %11000001, $7e,$18                         ; T
+  .byte %10000011, $60,                    $7e     ; L
+  .byte %00110001,         $78,$6c                 ; n
 coredump_font_END:
 exit_sfx_data:
   .byte %11001111, %11110001, %10010101, %00010000

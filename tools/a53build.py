@@ -8,6 +8,7 @@ from pb53 import pb53
 import donut
 import a53charset
 from dte import dte_compress
+import crc16xmodem
 
 trace = True
 trace_parser = False
@@ -1165,7 +1166,7 @@ the name block, and the description block.
             if len(musicplayerdat) != 16:
                 raise ValueError("musicplayerdat must be 16 bytes of hex")
         else:
-            musicplayerdat = b'# music space! #'
+            musicplayerdat = b'\x00'*16
 
         titledir_data = [
             prgstart, chr_starts[i], screenshot_ids[i], year,
@@ -1327,7 +1328,7 @@ def main(argv=None):
         offset -= 0x8000
         prgbank[offset:offset + len(data)] = data
     del prgbank, all_patches, cfg_patches, exit_patches
-        
+
     # Insert tile data for CHR ROM and screenshots
     chrdir = insert_chr(chrbanks, prgbanks)
     del chrbanks
@@ -1357,7 +1358,23 @@ def main(argv=None):
         raise ValueError("internal error: directory size of %d bytes does not match estimate of %d"
                          % (dirs_len2, est_dirs_len))
 
+
+
     desc_block_addr = ffd_add(prgbanks, desc_block)
+
+    checksums_dir = bytearray()
+    for bank in prgbanks:
+        checksum = crc16xmodem.crc16xmodem(bank[0][0x0000:0x4000])
+        checksums_dir.append(checksum >> 8)
+        checksums_dir.append(checksum & 0xff)
+        checksum = crc16xmodem.crc16xmodem(bank[0][0x4000:0x8000])
+        checksums_dir.append(checksum >> 8)
+        checksums_dir.append(checksum & 0xff)
+    # we'll put the database checksum at the end of it's 16KiB bank
+    # causing a checksum over the whole bank to acually be computed to 0.
+    checksums_dir[-3] = 0
+    checksums_dir[-4] = 0
+
     name_block_addr = ffd_add(final_banks, name_block)
     romdir_addr = ffd_add(final_banks, romdir)
     titledir_addr = ffd_add(final_banks, titledir)
@@ -1372,31 +1389,45 @@ def main(argv=None):
                         for s, e in final_banks[0][1]))
 
     title_strings_addr = ffd_add(final_banks, title_lines_data)
+    checksums_dir_addr = ffd_add(final_banks, checksums_dir)
 
     # Preadjust DTE table for indexing using Y register equal to
     # (codeunit - 128) * 2 and (codeunit - 128) * 2 + 1
     preadj_dte_addr = dte_replacements_addr[1] - (DTE_MIN_CODEUNIT - 128) * 2
 
-    # And finally make the key block at FF00
-    # Format:
-    # 00 ROM dir address, CHR dir address
-    # 04 screenshot dir address, title dir address
-    # 08 page dir address, name block address
-    # 0C desc block address, desc block bank, unused,
-    # 10 title screen address, 12 title strings address
-    # 14 DTE unused
+    # And finally make the key block at 8000
+    # bytes, item
+    # 04  Identification String
+    # 01  Mapper type: 28 = Action 53 mapper, 34 = oversize BNROM.
+    # 01  Negative number of 32KiB banks, also the number of the first bank. (0 = 256)
+    # 02  Total number of 16KiB banks.
+    # 02  CHR dir address
+    # 02  screenshot dir address
+    # 02  title dir address
+    # 02  page dir address
+    # 02  name block address
+    # 02  desc block address
+    # 01  desc block bank
+    # 01  unused
+    # 02  title screen address
+    # 02  title strings address
+    # 02  DTE
+    # 02  address to 16KiB bank checksums
+    # 02  ROM dir address (deprecated)
     keyblock = bytes([
-        romdir_addr[1] & 0xFF, romdir_addr[1] >> 8,
+        *b'\xa5A53', 28, 0x100-len(prgbanks), 0, 0,
         chrdir_addr[1] & 0xFF, chrdir_addr[1] >> 8,
         scrdir_addr[1] & 0xFF, scrdir_addr[1] >> 8,
         titledir_addr[1] & 0xFF, titledir_addr[1] >> 8,
         pagedir_addr[1] & 0xFF, pagedir_addr[1] >> 8,
         name_block_addr[1] & 0xFF, name_block_addr[1] >> 8,
         desc_block_addr[1] & 0xFF, desc_block_addr[1] >> 8,
-        desc_block_addr[0], 0xFF,
+        desc_block_addr[0], 0,
         title_screen_addr[1] & 0xFF, title_screen_addr[1] >> 8,
         title_strings_addr[1] & 0xFF, title_strings_addr[1] >> 8,
         preadj_dte_addr & 0xFF, preadj_dte_addr >> 8,
+        checksums_dir_addr[1] & 0xFF, checksums_dir_addr[1] >> 8,
+        romdir_addr[1] & 0xFF, romdir_addr[1] >> 8
     ])
     if trace:
         print("DTE table at $%04x" % preadj_dte_addr)
@@ -1405,6 +1436,10 @@ def main(argv=None):
               % (romdir_addr[1], romdir_addr[1] + len(romdir) - 1,
                  titledir_addr[1], titledir_addr[1] + len(titledir) - 1))
     final_bank[0x0000:0x0000 + len(keyblock)] = keyblock
+    db_checksum = crc16xmodem.crc16xmodem(final_bank[0x0000:0x3ffe])
+    print("db_checksum $%04x" % db_checksum)
+    final_bank[0x3ffe] = db_checksum >> 8
+    final_bank[0x3fff] = db_checksum & 0xFF
 
     if trace:
         print("Allocation of PRG banks")
@@ -1417,7 +1452,7 @@ def main(argv=None):
 
     iNES_prgbanks = len(prgbanks) * 2
     iNESheader = bytearray(b"NES\x1A")
-    
+
     iNESheader.append(iNES_prgbanks & 0xFF)
     iNESheader.append(0)  # no CHR ROM
     iNESheader.append(((mapperNumber & 0x0F) << 4) | 0x01)

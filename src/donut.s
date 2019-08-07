@@ -65,7 +65,7 @@ donut_block_count:      .res 1
 ; X >= 192: Also returns in Error, the buffer would of unexpectedly page warp.
 ;
 ; Trashes Y, A, temp 0 ~ temp 15.
-; bytes: 256, cycles: 1269 ~ 7238.
+; bytes: 253, cycles: 1269 ~ 7238.
 .proc donut_decompress_block
 plane_buffer        = temp+0 ; 8 bytes
 pb8_ctrl            = temp+8
@@ -86,6 +86,7 @@ is_rotated          = temp+14
 
   lda (donut_stream_ptr), y
   iny  ; Reading input bytes are now post-increment.
+  sta block_header
 
   cmp #$2a
   beq do_raw_block
@@ -103,9 +104,6 @@ rts
 ; The start of the main routine remains at the start of the .proc scope
 ; and I can save 1 byte with 'bcs end_block'
 
-shorthand_plane_def_table:
-  .byte $00, $55, $aa, $ff
-
 read_plane_def_from_stream:
   ror
   lda (donut_stream_ptr), y
@@ -121,11 +119,9 @@ do_raw_block:
     inx
     cpy #65  ; size of a raw block
   bcc raw_block_loop
-;  sty temp_y
 bcs end_block  ;,; jmp end_block
 
 continue_normal_block:
-  sta block_header
   stx block_offset
 
   ;,; lda block_header
@@ -202,10 +198,10 @@ continue_normal_block:
     sty temp_y
   ;,; beq end_plane  ;,; jmp end_plane
   end_plane:
-    ldy #8
     bit even_odd
     bpl not_xor_m_onto_l
     xor_m_onto_l:
+      ldy #8
       xor_m_onto_l_loop:
         dex
         lda donut_block_buffer, x
@@ -217,6 +213,7 @@ continue_normal_block:
 
     bvc not_xor_l_onto_m
     xor_l_onto_m:
+      ldy #8
       xor_l_onto_m_loop:
         dex
         lda donut_block_buffer, x
@@ -233,7 +230,7 @@ continue_normal_block:
 end_block:
   ;,; sec
   clc
-  tya ;lda temp_y
+  tya
   adc donut_stream_ptr+0
   sta donut_stream_ptr+0
   bcc add_stream_ptr_no_inc_high_byte
@@ -289,6 +286,9 @@ do_rotated_pb8_plane:
     dey
   bne flip_bits_loop
 beq end_plane  ;,; jmp end_plane
+
+shorthand_plane_def_table:
+  .byte $00, $55, $aa, $ff
 .endproc
 
 .segment "CODE"

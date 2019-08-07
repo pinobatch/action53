@@ -25,6 +25,8 @@
 .import __LOWCODE_RUN__, __LOWCODE_LOAD__
 .import __LOWCODE_SIZE__
 
+.import check_header, compute_cart_checksums
+
 .segment "OAM"
 OAM:            .res 256
 
@@ -156,6 +158,7 @@ rti
   sta $4017       ; Disable APU Frame IRQ
   lda #$0F
   sta SNDCHN      ; Disable DMC playback, initialize other channels
+  cld  ; Turn off decimal mode for post-patent famiclones
 
 ; Configures the Action 53 mapper to behave like oversize BNROM.
 ; inlined here so that coredump can read it's data in $8000~$BFFF
@@ -200,14 +203,20 @@ coredump_at_boot_readpad:
     bpl vwait1      ; stable.  Wait for the first frame's vblank.
     jmp coredump
   not_coredump:
-;  cpy #KEY_SELECT|KEY_START|KEY_UP|KEY_LEFT
-;  bne @not_cart_check
-;    ; in the database there's a CRC16 for every 16KiB (256 bytes for all crc16 sums)
-;  not_cart_check:
 
   ; Now that we know we're not running coredump:
+  ; set up and use the stack
+  ;,; ldx #$ff
   txs  ; Set stack pointer
-  cld  ; Turn off decimal mode for post-patent famiclones
+  ldx #3-1
+  load_nmi_routine:
+    lda nmi, x
+    pha
+    dex
+  bpl load_nmi_routine
+  ;,; ldx #$ff
+  tya
+  pha  ; save controller read across the ram clear
 
   ; Clear zeropage and OAM, to prevent uninitialized reads in nmis, etc.
   ldy #$00
@@ -218,13 +227,6 @@ coredump_at_boot_readpad:
     sta OAM, x
     inx
   bne clear_zp_and_oam_loop
-
-  ldx #3-1
-  load_nmi_routine:
-    lda nmi, x
-    pha
-    dex
-  bpl load_nmi_routine
 
   ; Copy the CHR decompression code to RAM.
 copy_LOWCODE:
@@ -252,12 +254,31 @@ copy_LOWCODE:
 
   ;jsr init_mapper  ; inlined above
 
+  pla  ; get back that inital controller read
+  sta cur_keys+0
+  sta cur_keys+1
+
   ; Wait for the second vblank and figure out what TV system we're on.
   ; After this, use only NMI to wait for vblank.
   jsr getTVSystem
   sta tvSystem
   lda #VBLANK_NMI
   sta PPUCTRL
+
+  ldy cur_keys+0
+  cpy #KEY_SELECT|KEY_B
+  bne skip_checksum
+    jmp compute_cart_checksums
+  skip_checksum:
+
+  ; Basic checks to see if the menu database exists.
+  ; Failure indicates either the user burns the menu bank
+  ; by itself without building a ROM, or that the database
+  ; wasn't mapped to $8000-$bfff
+  jsr check_header
+  beq good_header
+    jmp no_games_error
+  good_header:
 
   ; Blank the screen, wait for vblank, and wait a bit more,
   ; so that the Zapper's photodiode is detected as dark during
@@ -277,15 +298,6 @@ copy_LOWCODE:
   ; power-on doesn't close the title screen.
   jsr read_zapper_trigger
   jsr read_pads
-
-  ; If the title screen pointer is in $FF00-$FFFF, no games are
-  ; loaded.  This could happen if the user burns the menu bank
-  ; by itself without building a ROM.
-  ldy TITLESCREEN+1
-  iny
-  bne has_games
-    jmp no_games_error
-  has_games:
 
   jsr title_screen
   lda nmis
@@ -343,7 +355,7 @@ titleptr = $00
 ;;
 ; Loads the CHR bank ID associated with this title.
 ; @param $0000 pointer to entry in title directory
-; @param $8002 pointer to start of CHR directory, where each entry is
+; @param $8008 pointer to start of CHR directory, where each entry is
 ; 5 bytes: PRG bank, address low, high, midpoint offset low, high
 .proc load_titledir_chr_rom
 titleptr = $00

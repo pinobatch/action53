@@ -325,7 +325,7 @@ forever:
   jmp forever
 .endproc
 
-.segment "RODATA"
+.segment "CODE"
 no_games_title_strings:
-.byte 14+$00,  96, "No games added.",0
+.byte 14+$00,  88, "Directory load error.",0
 .byte $FF
