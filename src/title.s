@@ -316,11 +316,9 @@ COLOR1ON3 = $E0
   jsr draw_title_strings_ay
 
   ; And display it
-  ldx #0
-  ldy #0
   lda #VBLANK_NMI
   clc
-  jsr ppu_screen_on
+  jsr ppu_screen_on_scroll_0
 forever:
   jmp forever
 .endproc

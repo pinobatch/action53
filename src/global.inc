@@ -45,6 +45,7 @@ start_mappercfg  = $02  ; Mapper configuration byte for this activity
 .globalzp oam_used
 ; ppuclear.s methods
 .global ppu_clear_nt, ppu_clear_oam, ppu_screen_on, ppu_wait_vblank
+.global ppu_screen_on_scroll_0
 
 ; paldetect.s methods
 .global getTVSystem

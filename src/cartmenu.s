@@ -170,11 +170,9 @@ forever:
   stx OAMADDR
   sta OAM_DMA
   jsr blit_step_dispatch
-  ldx #0
-  ldy #0
   lda #VBLANK_NMI|BG_1000|OBJ_1000
   sec
-  jsr ppu_screen_on
+  jsr ppu_screen_on_scroll_0
   jsr pently_update_lag
 
 ; And the rest of the main loop handles the mouse, Zapper, and

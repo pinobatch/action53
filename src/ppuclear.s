@@ -10,6 +10,7 @@
 .include "nes.inc"
 .include "global.inc"
 .export ppu_clear_nt, ppu_clear_oam, ppu_screen_on, ppu_wait_vblank
+.export ppu_screen_on_scroll_0
 
 ;;
 ; Clears a nametable to a given tile number and attribute value.
@@ -64,6 +65,12 @@ loop:
   inx
   bne loop
   rts
+.endproc
+
+.proc ppu_screen_on_scroll_0
+  ldx #0
+  ldy #0
+;,; jmp ppu_screen_on
 .endproc
 
 ;;

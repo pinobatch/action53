@@ -2,7 +2,7 @@
 .include "global.inc"
 
 .import coredump_load_gfx
-.import ppu_screen_on, ppu_wait_vblank
+.import ppu_screen_on_scroll_0, ppu_wait_vblank
 
 .export check_header, compute_cart_checksums
 
@@ -13,13 +13,12 @@
     clc
     lda DIRECTORY_HEADER-1, y
     adc header_check_bytes-1, y
-    beq byte_checks_out
-    check_error:
-      rts  ; return Z = 0
-    byte_checks_out:
+    bne check_error  ; rts with Z = 1
     dey
   bne check_loop
-rts  ; return Z = 1
+  ; rts with Z = 0
+check_error:
+rts
 header_check_bytes:
 .byte $100-165, $100-65, $100-53, $100-51
 .endproc
@@ -29,13 +28,14 @@ crc_hi            = $00
 crc_lo            = $01
 read_ptr          = $02  ; 2 bytes
 read_page_count   = $04
-; ram $00 ~ $04 must match paramiters in ram code
+; ram $00 ~ $04 must match parameters in ram code
 current_32k_bank  = $05
 nt_ptr            = $06  ; 2 bytes
 crc_check_ptr     = $08  ; 2 bytes
   ldx #0
   stx PPUCTRL
   stx PPUMASK
+
   inx  ;,; ldx #$01
   ldy #$40
   bit _byte_with_b6_set  ;,; set V
@@ -43,34 +43,42 @@ crc_check_ptr     = $08  ; 2 bytes
   ;,; ldy #$00
   ;,; ldx #$00
 
-  lda #$20
-  sta nt_ptr+1
-  lda #$80
-  sta nt_ptr+0
-  ;,; lda #$80
-  sta read_ptr+1
   ;,; ldy #$00
   sty read_ptr+0
-
-  jsr check_header
-  bne db_checksum_fail
-
-  lda #$ff
-  jsr compute_16K_block
   lda #$80
   sta read_ptr+1
 
-  lda crc_lo
-  ora crc_hi
-  bne db_checksum_fail
-
-  lda NEG_NUMBER_OF_BANKS
-  sta current_32k_bank
+  ;,; lda #$80
+  sta nt_ptr+0
+  lda #$20
+  sta nt_ptr+1
 
   lda BANK_CHECKSUMS+0
   sta crc_check_ptr+0
   lda BANK_CHECKSUMS+1
   sta crc_check_ptr+1
+
+  lda NEG_NUMBER_OF_BANKS
+  sta current_32k_bank
+
+  jsr check_header
+  bne db_checksum_fail
+
+  ;,; ldy #$00
+  dex ;,; ldx #$ff
+  jsr compute_16K_block
+  ;,; lda crc_hi
+  ;,; ldx crc_lo
+  ;,; ldy #$ff
+
+  ;,; lda crc_hi
+  ora crc_lo
+  bne db_checksum_fail
+
+  ;,; ldy #$00
+  ;,; sty read_ptr+0
+  lda #$80
+  sta read_ptr+1
 
   next_checksum:
     ldx #string_at-strings_base
@@ -81,33 +89,43 @@ crc_check_ptr     = $08  ; 2 bytes
     cmp #$c0
     lda current_32k_bank
     rol
-    tay
+    tax
     lda #$00
     rol
-    ;,; clc
-    jsr print_number
 
-    jsr scroll_screen
+    ;,; and #$0f
+    sta PPUDATA
+    jsr print_byte_x
 
-    lda current_32k_bank
-    jsr compute_16K_block
+    lda #0
+    clc
+    jsr ppu_screen_on_scroll_0
+
     ;,; ldy #$00
+    ldx current_32k_bank
+    jsr compute_16K_block
+    ;,; ldx crc_lo
+    ;,; lda crc_hi
+    ;,; ldy #$ff
 
-    jsr read_checksum_byte_from_db
-    tay
-    jsr read_checksum_byte_from_db
-    cpy crc_hi
+    iny  ;,; ldy #$00
+    ;,; lda crc_hi
+    cmp (crc_check_ptr), y
     bne check_failed
-    cmp crc_lo
+    ;,; ldx crc_lo
+    txa
+    iny
+    cmp (crc_check_ptr), y
     beq check_succeed
 
   check_failed:
     ldx #string_err-strings_base
     jsr print_cr_and_str
 
-    lda crc_hi
-    ldy crc_lo
-    jsr print_number_both_digits
+    ldx crc_hi
+    jsr print_byte_x
+    ldx crc_lo
+    jsr print_byte_x
   advance_nt_ptr:
     clc
     lda nt_ptr+0
@@ -118,12 +136,19 @@ crc_check_ptr     = $08  ; 2 bytes
     no_carry:
   check_succeed:
 
+  clc
+  lda crc_check_ptr+0
+  adc #$02
+  sta crc_check_ptr+0
+  bne not_check_ptr_carry
+    inc crc_check_ptr+1
+  not_check_ptr_carry:
+
     lda read_ptr+1
-    bne not_next_16k_bank
-      lda #$80
-      sta read_ptr+1
-      inc current_32k_bank
-    not_next_16k_bank:
+  bne next_checksum
+    lda #$80
+    sta read_ptr+1
+    inc current_32k_bank
   bne next_checksum
 done:
   ldx #string_done-strings_base
@@ -131,7 +156,11 @@ done:
 db_checksum_fail:
   ldx #string_dberr-strings_base
   jsr print_cr_and_str
-  jsr scroll_screen
+  ;,; ldy #$00
+
+  tya ;,; lda #0
+  clc
+  jsr ppu_screen_on_scroll_0
 
   lda #%11000001
   ldx #4
@@ -140,13 +169,6 @@ db_checksum_fail:
     sta $4000, x
   bne end_sfx
 jam: jmp jam
-
-scroll_screen:
-  lda #0
-  tax  ;,; ldx #$00
-  tay  ;,; ldy #$00
-  clc
-jmp ppu_screen_on
 
 print_cr_and_str:
   lda nt_ptr+1
@@ -180,47 +202,29 @@ string_done:
 string_dberr:
   .byte 12, 6,   $0D,$0B,$20,$0E,$16,$16
 
-print_number_both_digits:
-  sec
-print_number:
-  jsr print_number_digit
-  tya
-  sec
-print_number_digit:
-  bcc skip_first_high_digit
-    tax
-    lsr
-    lsr
-    lsr
-    lsr
-    sta PPUDATA
-    txa
-  skip_first_high_digit:
+print_byte_x:
+  txa
+  lsr
+  lsr
+  lsr
+  lsr
+  sta PPUDATA
+  txa
   and #$0f
   sta PPUDATA
 rts
 
-read_checksum_byte_from_db:
-  ldx #$00
-  lda (crc_check_ptr, x)
-  inc crc_check_ptr+0
-  bne not_check_ptr_carry_1
-    inc crc_check_ptr+1
-  not_check_ptr_carry_1:
-rts
-
 compute_16K_block:
-  ldy #$00
+  ;,; ldy #$00
   sty crc_lo
   sty crc_hi
-  ldx #>$4000
-  stx read_page_count
+  lda #>$4000
+  sta read_page_count
   jsr compute_cart_checksums_ram_code
   vblank_loop:
     bit PPUSTATUS
   bpl vblank_loop
 rts
-
 .endproc
 
 .segment "LOWCODE"
@@ -229,7 +233,7 @@ CRCHI = $00          ; Yes, CRC is big endian
 CRCLO = $01
 READ_PTR = $02
 READ_PAGE_COUNT = $04
-  sta $8000
+  stx $8000
   check_16k_outer_loop:
     check_16k_inner_loop:
       lda (READ_PTR),y
@@ -267,7 +271,7 @@ READ_PAGE_COUNT = $04
     inc READ_PTR+1
     dec READ_PAGE_COUNT
   bne check_16k_outer_loop
-  lda #$ff
-  sta $8000
+  dey ;,; ldy #$ff
+  sty $8000
 rts
 .endproc
