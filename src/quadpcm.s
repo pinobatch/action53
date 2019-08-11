@@ -5,99 +5,114 @@ ciBlocksLeft = ciBufEnd
 
 .segment "CODE"
 .proc quadpcm_playPages
-ciBits = 2
+y_start = 2
 thisSample = 3
 lastSample = 4
 deEss = 5
+  sty y_start
+  sta ciSrc+1
+  inx
+  stx ciBlocksLeft
+  lda #$00
+  sta ciSrc+0
   lda #64
   sta thisSample
   sta lastSample
 
-nextPage:
-  ; start page
-  ldy #0
-  lda (ciSrc),y
-  sta deEss
-  inc ciSrc
-  ; waste some time
-  ldx #3
-pageWaste:
-  dex
-  bne pageWaste
-  lda $0100
-
-playByte:
-  ; Fetch byte
-  ldy #0
-  lda (ciSrc),y
-  inc ciSrc
-  sta ciBits
-  and #$0F
-  jsr decode1
-  ; waste time between samples
-  ldx #11
-midByteWaste:
-  dex
-  bne midByteWaste
-  lda ciBits
-  ; Fetch upper nibble
-  lda ciBits
-  lsr a
-  lsr a
-  lsr a
-  lsr a
-  jsr decode1
-  ; next byte
-  lda ciSrc
-  bne notWrap
-  ; go to next page
-  inc ciSrc+1
+next_page:
   dec ciBlocksLeft
-  bne nextPage
-  rts
-notWrap:
-  ; waste some time
-  ldx ciBits
-  ldx #8
-notWrapDelay:
-  dex
-  bne notWrapDelay
-  jmp playByte
+  beq return
+  jsr read_ciSrc
+  sta deEss
 
-decode1:
-  ; decode sample
+wait_20c:
+  nop
+  nop
+  ldx #3
+wait_20c_loop:
+  dex
+  bne wait_20c_loop
+
+play_byte:
+  lda (ciSrc),y       ; read but don't increment
+  and #$0F
+  jsr decode_samples
+
+wait_35c:
+  nop
+  nop
+  ldx #6
+wait_35c_loop:
+  dex
+  bne wait_35c_loop
+
+  jsr read_ciSrc
+  ; Fetch upper nibble
+  lsr a
+  lsr a
+  lsr a
+  lsr a
+  jsr decode_samples
+
+  cpy y_start
+  beq next_page
+
+wait_55c:
+  nop
+  nop
+  ldx #10
+wait_55c_loop:
+  dex
+  bne wait_55c_loop
+
+  jmp play_byte
+
+read_ciSrc:
+  lda (ciSrc),y
+  iny
+  ; if Z = 0, 2+2+4 cycles
+  ; if Z = 1, 3+5 cycles
+  beq inc_ciSrc_hi
+  nop
+  .byte $2c       ; bit opcode to skip next instruction
+inc_ciSrc_hi:
+  inc ciSrc+1
+return:
+  rts
+
+decode_samples:
   tax
   lda quadpcm_deltas,x
   clc
   adc lastSample
   and #$7F
   sta thisSample
-  ; interpolation
+interpolate:
   clc
   adc lastSample
   lsr a
   eor deEss
-  sta $4011
-  ; end sample period
+output_samples:
+  sta $4011       ; 112 cycles between output samples ~= 15980 hz
+; end sample period
+wait_102c:
   ldx #19
-endPeriodWait:
+wait_102c_loop:
   dex
-  bne endPeriodWait
+  bne wait_102c_loop
   lda (ciSrc,x)
+
   lda thisSample
   sta lastSample
-  sta $4011
+  sta $4011       ; 112 cycles between output samples ~= 15980 hz
   rts
 .endproc
 .assert >quadpcm_playPages = >*, error, "quadpcm_playPages crosses page boundary"
 
 .proc quadpcm_test
-  lda #<selnow_qdp
-  sta ciSrc
+  ldy #<selnow_qdp
   lda #>selnow_qdp
-  sta ciSrc+1
-  lda #>(selnow_qdp_end - selnow_qdp)
-  sta ciBlocksLeft
+  ldx #>(selnow_qdp_end - selnow_qdp)
   jmp quadpcm_playPages
 .endproc
 

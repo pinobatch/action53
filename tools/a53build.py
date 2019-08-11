@@ -1400,7 +1400,7 @@ def main(argv=None):
     # 04  Identification String
     # 01  Mapper type: 28 = Action 53 mapper, 34 = oversize BNROM.
     # 01  Negative number of 32KiB banks, also the number of the first bank. (0 = 256)
-    # 02  Total number of 16KiB banks.
+    # 02  unused
     # 02  CHR dir address
     # 02  screenshot dir address
     # 02  title dir address

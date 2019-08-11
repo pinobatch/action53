@@ -544,7 +544,6 @@ rts
 .endproc
 
 .if 0
-.segment "CODE"
 ;;
 ; @param A start of buffer (0 or 64)
 ; @return A number of compressed bytes read
@@ -576,6 +575,7 @@ chrdir_entry = load_titledir_chr_rom_chrdir_entry
 .endproc
 .endif
 
+.segment "CODE"
 ;;
 ; Reads a mouse and maps presses of L to A and R to B
 ; in new_keys.
