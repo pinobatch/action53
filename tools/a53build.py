@@ -2,6 +2,7 @@
 import re
 import sys
 import os
+import subprocess
 from firstfit import ffd_add, slices_union, slices_find, slices_remove
 from innie import InnieParser
 from pb53 import pb53
@@ -16,6 +17,18 @@ default_screenshot_filename = '../tilesets/screenshots/default.png'
 default_title_screen = '../tilesets/title_screen.png'
 default_title_palette = bytes.fromhex('0f0010200f1626200f1A2A200f122220')
 default_menu_prg = '../a53menu.prg'
+
+# If avaliable on the system path, try using the fast encoder for the Donut Codec.
+try:
+    if subprocess.run(["donut", "--help"], capture_output=True).stdout[0:20] == b'Donut NES CHR Codec\n':
+        def donut_compress(d):
+            return subprocess.run(["donut", "-c"], input=d ,capture_output=True).stdout
+    else:
+        def donut_compress(d):
+            return donut.compress(d)
+except FileNotFoundError:
+    def donut_compress(d):
+        return donut.compress(d)
 
 # DTE compression uses code units greater than any existing code
 # unit in a53charset to represent pairs (or more) of characters.
@@ -799,7 +812,7 @@ def bmptosb53(infilename, palette, max_tiles=256, trace=False):
     outdata = b''.join([
         bytes([compressed_tile_data[1] & 0xFF]),
         compressed_tile_data[0],
-        donut.compress(namdata),
+        donut_compress(namdata),
         palette
     ])
     if trace:
@@ -909,28 +922,12 @@ copies tiles from the first.  The first starts from Address, the
 second from (Address + Midpoint).
 
 """
-    def compress_4096_segments(data):
-        def interleave_segments(d):
-            for a, b in ((d[i:i+64], d[i+4096:i+4096+64]) for i in range(0, len(d)//2, 64)):
-                for c in a:
-                    yield c
-                for c in b:
-                    yield c
-        cdata_a = []
-        cdata_b = []
-        odd_block = False
-        for cblock in donut.get_cblocks_from_bytes(interleave_segments(data)):
-            if odd_block:
-                cdata_b.append(cblock)
-            else:
-                cdata_a.append(cblock)
-            odd_block = not odd_block
-        segment_a = b''.join(cdata_a)
-        segment_b = b''.join(cdata_b)
-        return (segment_a + segment_b, [len(segment_a)])
+    def compress_segments(data):
+        cdata = donut_compress(data)
+        return (cdata, [len(cdata)])
 
     total_unco = sum(len(c) for c in chrbanks)
-    pb53banks = [compress_4096_segments(c) for c in chrbanks]
+    pb53banks = [compress_segments(c) for c in chrbanks]
     del chrbanks
 
     # Insert the CHR banks

@@ -66,16 +66,6 @@ load_titledir_chr_rom_num_chr_banks: .res 1
   .byt $00        ; mapper number upper nibble
 .endif
 
-.segment "BFF0"
-.proc patch_bff0
-  sei
-ldxinstr:
-  ldx #$FF
-  nop
-  stx ldxinstr+1
-  jmp ($FFFC)
-.endproc
-
 .segment "FFF0"
 .proc patch_fff0
   sei
@@ -434,17 +424,11 @@ nextbank:
   ; ciSrc0: Address of first 4 KiB
   ; ciSrc1: Address of second 4 KiB
   ; drawProgress: number of blocks already drawn
-loop:
-  lda draw_progress
-  lsr a
-  ror 0
-  lsr a
-  ror 0
+  lda #$00
   sta PPUADDR
-  lda 0
-  and #$c0
   sta PPUADDR
 
+loop:
   lda ciSrc0
   sta 0
   lda ciSrc0+1
@@ -456,31 +440,9 @@ loop:
   inc ciSrc0+1
 :
 
-  lda draw_progress
-  lsr a
-  ror 0
-  lsr a
-  ror 0
-  eor #$10
-  sta PPUADDR
-  lda 0
-  and #$c0
-  sta PPUADDR
-
-  lda ciSrc1
-  sta 0
-  lda ciSrc1+1
-  sta 1
-  jsr load_titledir_chr_rom_do4
-  adc ciSrc1
-  sta ciSrc1
-  bcc :+
-  inc ciSrc1+1
-:
-
   inc draw_progress
   lda draw_progress
-  cmp #64
+  cmp #128
   bcc loop
 
   dec num_chr_banks
@@ -512,9 +474,10 @@ chrdir_entry = load_titledir_chr_rom_chrdir_entry
   lda ($00), y
   cmp #$2a
   bne continue_normal_block
+    iny
     raw_block_loop:
-      iny
       lda ($00), y
+      iny
       sta PPUDATA
       cpy #65  ; size of a raw block
     bcc raw_block_loop
@@ -542,38 +505,6 @@ chrdir_entry = load_titledir_chr_rom_chrdir_entry
   clc
 rts
 .endproc
-
-.if 0
-;;
-; @param A start of buffer (0 or 64)
-; @return A number of compressed bytes read
-.proc load_titledir_chr_rom_do4_old
-chrdir_entry_zp = $02  ; matches interbank_fetch bank ptr
-chrdir_entry = load_titledir_chr_rom_chrdir_entry
-  lda #65  ; block of 4 tiles, max 64 + 1 bytes
-  sta $04
-  lda chrdir_entry
-  sta chrdir_entry_zp
-  lda chrdir_entry+1
-  sta chrdir_entry_zp+1
-  lda #0
-  sta PPUCTRL
-  bit PPUSTATUS
-  jsr interbank_fetch
-  lda #VBLANK_NMI
-  sta PPUCTRL
-  ldy #<interbank_fetch_buf
-  lda #>interbank_fetch_buf
-  ldx #1
-  jsr donut_block_ayx
-  jsr pently_update_lag
-  lda donut_stream_ptr+0
-  sec
-  sbc #<interbank_fetch_buf
-  clc
-  rts
-.endproc
-.endif
 
 .segment "CODE"
 ;;

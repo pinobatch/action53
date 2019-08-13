@@ -4,6 +4,13 @@ ciBlocksLeft = ciBufEnd
 .export quadpcm_test, quadpcm_playPages
 
 .segment "CODE"
+.proc quadpcm_test
+  ldy #<selnow_qdp
+  lda #>selnow_qdp
+  ldx #>(selnow_qdp_end - selnow_qdp)
+;,;jmp quadpcm_playPages
+.endproc
+
 .proc quadpcm_playPages
 y_start = 2
 thisSample = 3
@@ -65,7 +72,7 @@ wait_55c_loop:
   dex
   bne wait_55c_loop
 
-  jmp play_byte
+  beq play_byte  ;,; jmp play_byte
 
 read_ciSrc:
   lda (ciSrc),y
@@ -109,45 +116,13 @@ wait_102c_loop:
 .endproc
 .assert >quadpcm_playPages = >*, error, "quadpcm_playPages crosses page boundary"
 
-.proc quadpcm_test
-  ldy #<selnow_qdp
-  lda #>selnow_qdp
-  ldx #>(selnow_qdp_end - selnow_qdp)
-  jmp quadpcm_playPages
-.endproc
-
-.segment "PAGERODATA"
-selnow_qdp:
-  .incbin "obj/nes/selnow.qdp"
-selnow_qdp_end:
-
-.if 0
-testdata:
-.repeat 2, I
-  .repeat 2
-    .byt I*$7F
-    .repeat 85
-      .byt $04,$C0,$00
-    .endrepeat
-  .endrepeat
-  .repeat 2
-    .byt I*$7F
-    .byt $04,$C0,$00
-    .repeat 63
-      .byt $04,$00,$0C,$00
-    .endrepeat
-  .endrepeat
-  .repeat 2
-    .byt I*$7F
-    .repeat 51
-      .byt $04,$00,$C0,$00,$00
-    .endrepeat
-  .endrepeat
-.endrepeat
-.endif
-
-.segment "RODATA"
+.segment "CODE"
 quadpcm_deltas:
   .byt 0,1,4,9,16,25,36,49
   .byt 64,<-49,<-36,<-25,<-16,<-9,<-4,<-1
 .assert >quadpcm_deltas = >*, error, "quadpcm_deltas crosses page boundary"
+
+.segment "VOICEDATA"
+selnow_qdp:
+  .incbin "obj/nes/selnow.qdp"
+selnow_qdp_end:
