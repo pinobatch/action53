@@ -18,17 +18,40 @@ default_title_screen = '../tilesets/title_screen.png'
 default_title_palette = bytes.fromhex('0f0010200f1626200f1A2A200f122220')
 default_menu_prg = '../a53menu.prg'
 
+
+def donut_compress(d):
+    return donut.compress(d)
+def compress_screenshot_tiledata(tiledata):
+    result = []
+    for i in range(0, len(tiledata), 96):
+        bg_block = tiledata[i:i+64]
+        fg_mask = b''.join(tiledata[i+p+64:i+p+64+8]+tiledata[i+p+64:i+p+64+8] for p in range(0, 32, 8))
+        fg_block = bytes(t & m for t, m in zip(bg_block, fg_mask))
+        bg_mask = bytes(~m&0xff for m in fg_mask)
+        result.append(donut.compress_single_block(bg_block, bg_mask))
+        result.append(donut.compress_single_block(fg_block))
+    return b''.join(result)
 # If avaliable on the system path, try using the fast encoder for the Donut Codec.
 try:
     if subprocess.run(["donut", "--help"], capture_output=True).stdout[0:20] == b'Donut NES CHR Codec\n':
         def donut_compress(d):
             return subprocess.run(["donut", "-c"], input=d ,capture_output=True).stdout
-    else:
-        def donut_compress(d):
-            return donut.compress(d)
+    if subprocess.run(["donut", "--interleaved-dont-care-bits", "--help"], capture_output=True).returncode == 0:
+        def compress_screenshot_tiledata(tiledata):
+            data = []
+            for i in range(0, len(tiledata), 96):
+                bg_block = tiledata[i:i+64]
+                fg_mask = b''.join(tiledata[i+p+64:i+p+64+8]+tiledata[i+p+64:i+p+64+8] for p in range(0, 32, 8))
+                fg_block = bytes(t & m for t, m in zip(bg_block, fg_mask))
+                bg_mask = bytes(~m&0xff for m in fg_mask)
+                data.append(bg_block)
+                data.append(fg_mask)
+                data.append(fg_block)
+                data.append(b'\x00'*64)
+            d = b''.join(data)
+            return subprocess.run(["donut", "--interleaved-dont-care-bits", "-c"], input=d ,capture_output=True).stdout
 except FileNotFoundError:
-    def donut_compress(d):
-        return donut.compress(d)
+    pass
 
 # DTE compression uses code units greater than any existing code
 # unit in a53charset to represent pairs (or more) of characters.
@@ -807,11 +830,11 @@ def bmptosb53(infilename, palette, max_tiles=256, trace=False):
              for (t, b) in zip(attrs[0::2], attrs[1::2])]
     namdata.extend(b''.join(attrs))
 
-    compressed_tile_data = list(donut.get_cblocks_from_bytes(b''.join(chrdata), allow_partial=True))
-    compressed_tile_data = (b''.join(compressed_tile_data), len(compressed_tile_data))
+    while ((len(chrdata) % 4) != 0):
+        chrdata.append(b'\x00'*16)
     outdata = b''.join([
-        bytes([compressed_tile_data[1] & 0xFF]),
-        compressed_tile_data[0],
+        bytes([(len(chrdata)//4) & 0xFF]),
+        donut_compress(b''.join(chrdata)),
         donut_compress(namdata),
         palette
     ])
@@ -842,15 +865,6 @@ screenshots is [(pb53_bytes, [color1, color2, color3]), ...]
 screenshot_ids is a list of one index into screenshots for each title
 
 """
-    def compress_screenshot_tiledata(tiledata):
-        for i in range(0, len(tiledata), 96):
-            bg_block = tiledata[i:i+64]
-            fg_mask = b''.join(tiledata[i+p+64:i+p+64+8]+tiledata[i+p+64:i+p+64+8] for p in range(0, 32, 8))
-            fg_block = bytes(t & m for t, m in zip(bg_block, fg_mask))
-            bg_mask = bytes(~m&0xff for m in fg_mask)
-            #print(len(bg_block),len(fg_mask),len(fg_block),len(bg_mask))
-            yield donut.compress_single_block(bg_block, bg_mask)
-            yield donut.compress_single_block(fg_block)
     screenshots = []
     screenshots_by_name = {}
     screenshot_ids = []
@@ -862,7 +876,7 @@ screenshot_ids is a list of one index into screenshots for each title
         except KeyError:
             headerdata, tiledata = load_screenshot(filename)
             scrid = len(screenshots)
-            ctiledata = b''.join(compress_screenshot_tiledata(tiledata))
+            ctiledata = compress_screenshot_tiledata(tiledata)
             screenshots.append(headerdata+ctiledata)
             screenshots_by_name[filename] = scrid
         screenshot_ids.append(scrid)
