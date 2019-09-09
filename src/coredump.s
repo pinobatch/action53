@@ -10,8 +10,7 @@
 
 ; 2019-08-05: Version 1.6
 ;   - Removed Serifs from font for reability (and compression).
-;   - Added ability to only setup gfx as a subroutine.
-;   - 411 bytes code + 128 bytes chr data + 8 bytes sfx data.
+;   - 408 bytes code + 128 bytes chr data + 8 bytes sfx data.
 ; 2018-05-26: Version 1.5:
 ;   - Rewrite, with vastly diffrent tricks from previous versions.
 ;   - Compressed font.
@@ -111,7 +110,7 @@ JOY_PORT_2      = $4017
   BUTTON_RIGHT     = %00000001
 
 .export coredump
-.export coredump_load_gfx
+.import compute_cart_checksums
 
 .segment "CODE"
 .proc coredump
@@ -207,11 +206,6 @@ clear_nametable:
     sta APU_PL1_VOL-$100+4, x
     inx
   bne @__loop2
-
-  ; nothing above (not even cpx) uses the V flag, we can add in this hack
-  ; to allow external code to use gfx seting parts as a subroutine.
-  bvc refresh_screen
-rts
 
 ;;
 ; The main loop.
@@ -395,7 +389,7 @@ read_pads:
 
 check_for_exit:
   cpx #BUTTON_A|BUTTON_B|BUTTON_START|BUTTON_SELECT
-  bne continue
+  bne continue_1
     play_exit_sound:
       ldx #$100-4
       @__loop:
@@ -413,7 +407,11 @@ check_for_exit:
       bne @__loop2
     exit_coredump_by_reset:
     jmp ($fffc)
-  continue:
+  continue_1:
+  cpx #BUTTON_LEFT|BUTTON_A
+  bne continue_2
+    jmp compute_cart_checksums
+  continue_2:
 
   cpy #%00010000   ; C = button pressed last frame
   tax              ; Z = button pressed this frame
@@ -456,8 +454,6 @@ turn_off_screen:
   stx PPU_MASK
 jmp refresh_screen
 .endproc
-
-coredump_load_gfx = coredump::set_palette
 
 .segment "RODATA"
 

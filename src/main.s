@@ -255,12 +255,6 @@ copy_LOWCODE:
   lda #VBLANK_NMI
   sta PPUCTRL
 
-  ldy cur_keys+0
-  cpy #KEY_SELECT|KEY_B
-  bne skip_checksum
-    jmp compute_cart_checksums
-  skip_checksum:
-
   ; Basic checks to see if the menu database exists.
   ; Failure indicates either the user burns the menu bank
   ; by itself without building a ROM, or that the database

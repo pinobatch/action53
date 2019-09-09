@@ -2,7 +2,7 @@
 .include "global.inc"
 
 .import coredump_load_gfx
-.import ppu_screen_on_scroll_0, ppu_wait_vblank
+.import ppu_screen_on_scroll_0, ppu_clear_nt
 
 .export check_header, compute_cart_checksums
 
@@ -32,18 +32,32 @@ read_page_count   = $04
 current_32k_bank  = $05
 nt_ptr            = $06  ; 2 bytes
 crc_check_ptr     = $08  ; 2 bytes
+ram_code_jmp      = $0a  ; 2 bytes
   ldx #0
-  stx PPUCTRL
   stx PPUMASK
 
-  inx  ;,; ldx #$01
-  ldy #$40
-  bit _byte_with_b6_set  ;,; set V
-  jsr coredump_load_gfx
-  ;,; ldy #$00
-  ;,; ldx #$00
+  ldx #$ff
+  txs
 
-  ;,; ldy #$00
+  lda #$20
+  ldx #$20
+  ldy #$00
+  jsr ppu_clear_nt
+
+  ldx #$01
+  stx ram_code_jmp+1
+
+  ldx #ram_code_size
+  copy_ram_code_loop:
+    lda ram_code_begin-1, x
+    pha
+    dex
+  bne copy_ram_code_loop
+  tsx
+  inx
+  stx ram_code_jmp+0
+
+  ldy #$00
   sty read_ptr+0
   lda #$80
   sta read_ptr+1
@@ -65,7 +79,7 @@ crc_check_ptr     = $08  ; 2 bytes
   bne db_checksum_fail
 
   ;,; ldy #$00
-  dex ;,; ldx #$ff
+  ldx #$ff
   jsr compute_16K_block
   ;,; lda crc_hi
   ;,; ldx crc_lo
@@ -140,7 +154,7 @@ crc_check_ptr     = $08  ; 2 bytes
   lda crc_check_ptr+0
   adc #$02
   sta crc_check_ptr+0
-  bne not_check_ptr_carry
+  bcc not_check_ptr_carry
     inc crc_check_ptr+1
   not_check_ptr_carry:
 
@@ -220,15 +234,9 @@ compute_16K_block:
   sty crc_hi
   lda #>$4000
   sta read_page_count
-  jsr compute_cart_checksums_ram_code
-  vblank_loop:
-    bit PPUSTATUS
-  bpl vblank_loop
-rts
-.endproc
+jmp (ram_code_jmp)
 
-.segment "LOWCODE"
-.proc compute_cart_checksums_ram_code
+ram_code_begin:
 CRCHI = $00          ; Yes, CRC is big endian
 CRCLO = $01
 READ_PTR = $02
@@ -273,5 +281,11 @@ READ_PAGE_COUNT = $04
   bne check_16k_outer_loop
   dey ;,; ldy #$ff
   sty $8000
+  vblank_loop:
+    bit PPUSTATUS
+  bpl vblank_loop
 rts
+ram_code_end:
+
+ram_code_size = ram_code_end - ram_code_begin
 .endproc

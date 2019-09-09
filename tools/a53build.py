@@ -1084,6 +1084,10 @@ def pad_to_pow2m1(prgbanks):
     while (len(prgbanks) & (len(prgbanks) + 1)) != 0:
         prgbanks.append(ffd_prg_factory())
 
+def pad_n_banks(prgbanks, n):
+    for i in range(n):
+        prgbanks.append(ffd_prg_factory())
+
 def make_title_directory(titles, roms_by_name,
                          prg_starts, chr_starts, chr_lengths, screenshot_ids):
     """Make a machine-readable directory of ROM titles.
@@ -1294,6 +1298,7 @@ def main(argv=None):
     if trace:
         print("ROM size before adding CHR: %d PRG banks" % len(prgbanks))
     pad_to_pow2m1(prgbanks)
+#    pad_n_banks(prgbanks, 192)
     if trace:
         print("padded to power of 2: %d PRG banks" % len(prgbanks))
 
