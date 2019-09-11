@@ -36,6 +36,10 @@ imgdir = tilesets
 EMU := fceux
 DEBUGEMU := ~/.wine/drive_c/Program\ Files\ \(x86\)/FCEUX/fceux.exe
 
+# Flags for native tools written in C
+CC := gcc
+CFLAGS := -std=gnu99 -Wall -Wextra -DNDEBUG -Os
+
 # Windows needs .exe suffixed to the names of executables; UNIX does
 # not.  COMSPEC will be set to the name of the shell on Windows and
 # not defined on UNIX.  Also the Windows Python installer puts
@@ -55,8 +59,17 @@ run: $(cfgtitle).nes
 debug: $(cfgtitle).nes
 	$(DEBUGEMU) $<
 
+tools/donut$(DOTEXE): tools/donut.c
+	$(CC) -static $(CFLAGS) -o $@ $^
+
+tools/dte$(DOTEXE): tools/dte.c
+	$(CC) -static $(CFLAGS) -o $@ $^
+
+tools/dtefe.py: tools/dte$(DOTEXE)
+
 %.nes: collections/%/a53.cfg $(title).prg tools/a53build.py \
-  tools/ines.py tools/innie.py tools/a53charset.py tools/a53screenshot.py
+  tools/ines.py tools/innie.py tools/a53charset.py tools/a53screenshot.py \
+  tools/dtefe.py tools/donut$(DOTEXE)
 	$(PY) tools/a53build.py $< $@
 
 # Rule to create or update the distribution zipfile by adding all
@@ -79,7 +92,7 @@ $(cfgtitle)-$(cfgversion).7z: $(cfgtitle).nes $(foreach o,$(othercfgs),$(o).nes)
 all: $(title).prg
 
 clean:
-	-rm $(objdir)/*.o $(objdir)/*.sav $(objdir)/*.s $(objdir)/*.chr $(objdir)/*.nam $(objdir)/*.pb53 $(objdir)/*.donut $(objdir)/*.qdp
+	-rm $(objdir)/*.o $(objdir)/*.sav $(objdir)/*.s $(objdir)/*.chr $(objdir)/*.nam $(objdir)/*.pb53 $(objdir)/*.donut $(objdir)/*.qdp tools/donut$(DOTEXE) tools/dte$(DOTEXE)
 
 $(objdir)/index.txt: makefile
 	echo Files produced by build tools go here, but caulk goes where? > $@
@@ -113,8 +126,8 @@ $(objdir)/selnow.qdp: tools/quadanalyze.py audio/selnow.wav
 $(objdir)/%.pb53: $(objdir)/%
 	$(PY) tools/pb53.py --raw $< $@
 
-$(objdir)/%.donut: $(objdir)/%
-	$(PY) tools/donut.py -fq $< $@
+$(objdir)/%.donut: $(objdir)/% tools/donut$(DOTEXE)
+	tools/donut$(DOTEXE) -fq $< $@
 
 $(objdir)/%.chr: $(imgdir)/%.png
 	$(PY) tools/pilbmp2nes.py $< $@

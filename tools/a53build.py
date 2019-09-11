@@ -8,7 +8,8 @@ from innie import InnieParser
 from pb53 import pb53
 import donut
 import a53charset
-from dte import dte_compress
+from dtefe import dte_compress
+
 import crc16xmodem
 
 trace = True
@@ -33,10 +34,11 @@ def compress_screenshot_tiledata(tiledata):
     return b''.join(result)
 # If avaliable on the system path, try using the fast encoder for the Donut Codec.
 try:
-    if subprocess.run(["donut", "--help"], capture_output=True).stdout[0:20] == b'Donut NES CHR Codec\n':
+    donut_path = os.path.join(os.path.dirname(__file__), "donut")
+    if subprocess.run([donut_path, "--help"], capture_output=True).stdout[0:20] == b'Donut NES CHR Codec\n':
         def donut_compress(d):
-            return subprocess.run(["donut", "-c"], input=d ,capture_output=True).stdout
-    if subprocess.run(["donut", "--interleaved-dont-care-bits", "--help"], capture_output=True).returncode == 0:
+            return subprocess.run([donut_path, "-c"], input=d ,capture_output=True).stdout
+    if subprocess.run([donut_path, "--interleaved-dont-care-bits", "--help"], capture_output=True).returncode == 0:
         def compress_screenshot_tiledata(tiledata):
             data = []
             for i in range(0, len(tiledata), 96):
@@ -49,7 +51,8 @@ try:
                 data.append(fg_block)
                 data.append(b'\x00'*64)
             d = b''.join(data)
-            return subprocess.run(["donut", "--interleaved-dont-care-bits", "-c"], input=d ,capture_output=True).stdout
+            return subprocess.run([donut_path, "--interleaved-dont-care-bits", "-c"], input=d ,capture_output=True).stdout
+    print("Using compiled Donut executable", file=sys.stderr)
 except FileNotFoundError:
     pass
 

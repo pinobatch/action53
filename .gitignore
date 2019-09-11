@@ -15,6 +15,10 @@
 /nsfmap.txt
 __pycache__/
 *.pyc
+/tools/donut
+/tools/donut.exe
+/tools/dte
+/tools/dte.exe
 
 # this is NES homebrew, not DSiWare
 *.DS_Store
