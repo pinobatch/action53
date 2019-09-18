@@ -123,14 +123,27 @@ exitmethod=none
 """
 from firstfit import slices_union, slices_find, slices_remove
 
-fff0_patch = bytes.fromhex("78A2FFEA8E02006CFCFF"), [5]
-anywhere_patch = bytes.fromhex("78A205BD0E0095F0CA10F84CF0008E13006CFCFF"), [4, 15]
-ffeb_patch = bytes.fromhex("78A0818C0050A2FFEA8E00806CFCFF"), []
-a53_anywhere_patch = bytes.fromhex(
-    "78A20BBD160095F0CA10F8"    # copying to RAM
-    "A0808C0050A900C84CF000"    # setting up register values
-    "8D00808C00508E00806CFCFF"  # RAM code
-), [4]
+fff0_patch = (
+    bytes.fromhex("78A2FFEA8E02006CFCFF"),
+    (5,)
+)
+anywhere_patch = (
+    bytes.fromhex("78A205BD0E0095F0CA10F84CF0008E13006CFCFF"),
+    (4, 15)
+)
+ffeb_patch = (
+    bytes.fromhex("78A0818C0050A2FFEA8E00806CFCFF"),
+    ()
+)
+a53_anywhere_patch = (
+    bytes.fromhex(
+        "78A20BBD160095F0CA10F8"    # copying to RAM
+        "A0808C0050A900C84CF000"    # setting up register values
+        "8D00808C00508E00806CFCFF"  # RAM code
+    ), (4,)
+)
+
+anywhere_patches = {a53_anywhere_patch, anywhere_patch}
 
 def reloc_exit_patch(patch_data, relocs, start_address):
     """Relocate a piece of 6502 code to a given starting address."""
@@ -155,6 +168,7 @@ Fields:
 prgunused -- list of slice lists, one for each bank.  A slice list is
     a list of 2-tuples of what address space is free for this bank.
     The first byte in the bank is 0x8000; one past the end is 0x10000.
+    Slice lists will be modified in place.
     See firstfit.py for details.
 patched -- list of bools telling whether each bank has been patched
 patches -- list of tuples of the form
@@ -184,6 +198,11 @@ patches -- list of tuples of the form
         self.prgunused = prgunused
         self.patched = [False for i in range(0, self.prgsize, 0x8000)]
         self.patches = []
+
+        # If the anywhere or a53_anywhere patch is used, other banks
+        # in the same ROM need to use the anywhere patch, not the
+        # NROM patch.
+        self.anywhere_used = False
 
     def num_banks(self):
         """Count 32K banks in prg."""
@@ -255,6 +274,9 @@ unrom180 -- if True, patch $BFFC and $FFFC of all banks 0 through
         'unrom180': [
             ((0x8000, 0xBFFA), a53_anywhere_patch),
         ],
+        'finishanywhere': [
+            ((0x8000, 0xFFFA), anywhere_patch),
+        ],
     }
 
     def find_dest(self, method=None, entrybank=None):
@@ -288,7 +310,10 @@ Return
             self.assert_bank_in_range(entrybank)
         prgunused = self.prgunused[entrybank]
 
-        for loc, (patch_data, relocs) in locs:
+        for loc, patchdata_relocs in locs:
+            if patchdata_relocs in anywhere_patches:
+                self.anywhere_used = True
+            (patch_data, relocs) = patchdata_relocs
             if isinstance(loc, tuple):
                 astart, aend = loc
                 for ustart, uend in prgunused:
@@ -341,11 +366,12 @@ skip_full -- Instead of failing, set prgunused to the empty list.
     not include any compressed CHR ROM data and screenshots.
 
 """
+        patch_method = "finishanywhere" if self.anywhere_used else "nrom"
         for i, already_patched in enumerate(self.patched):
             if already_patched:
                 continue
             try:
-                self.add_patch("nrom", i)
+                self.add_patch(patch_method, i)
             except UnpatchableError:
                 if not skip_full:
                     raise
