@@ -2,8 +2,10 @@
 from contextlib import closing
 import sys
 import array
+import argparse
 
 # Use SoX
+import wave as wavewriter
 try:
     import soxwave
 except ImportError:
@@ -40,6 +42,16 @@ def play_data(data, rate):
         data.byteswap()
     args = ['play', '-t', 's16', '-r', str(rate), '-c', '1', '-L', '-']
     wave.sox_spawn(args, data.tostring())
+
+def save_wave_as_mono16(filename, freq, data):
+    data = array.array('h', (min(max(s, -32767), 32767) for s in data))
+    if not little:
+        data.byteswap()
+    with closing(wavewriter.open(filename, "wb")) as outfp:
+        outfp.setnchannels(1)
+        outfp.setsampwidth(2)
+        outfp.setframerate(freq)
+        outfp.writeframes(data.tobytes())
 
 deltas = [0, 1, 4, 9, 16, 25, 36, 49,
           64, -49, -36, -25, -16, -9, -4, -1]
@@ -150,16 +162,30 @@ def quads_dec(bitstream):
              for (i, s) in enumerate(f))
     return array.array('h', unflp)
 
+def parse_argv(argv):
+    a = argparse.ArgumentParser()
+    a.add_argument("infile")
+    a.add_argument("outfile")
+    a.add_argument("-d", "--decode", action="store_true",
+                   help="convert qdp to wav (default: wav to qdp)")
+    return a.parse_args(argv[1:])
+
 def main(argv=None):
-    argv = argv or sys.argv
-    infilename = argv[1]
-    outfilename = argv[2]
-    data = load_file(infilename)
-    bitstream = quads_enc(data)
-    if len(bitstream) % 256 > 0:
-        bitstream.extend([0] * (256 - (len(bitstream) % 256)))
-    with open(outfilename, "wb") as outfp:
-        outfp.write(bitstream.tostring())
+    args = parse_argv(argv or sys.argv)
+    infilename = args.infile
+    outfilename = args.outfile
+    if args.decode:
+        with open(infilename, "rb") as infp:
+            bitstream = infp.read()
+        wavedata = quads_dec(bitstream)
+        save_wave_as_mono16(outfilename, 16000, wavedata)
+    else:
+        wavedata = load_file(infilename)
+        bitstream = quads_enc(wavedata)
+        if len(bitstream) % 256 > 0:
+            bitstream.extend([0] * (256 - (len(bitstream) % 256)))
+        with open(outfilename, "wb") as outfp:
+            outfp.write(bitstream.tostring())
 
 if __name__=='__main__':
     main()
