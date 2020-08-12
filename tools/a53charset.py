@@ -10,8 +10,8 @@ decoding_table = [
     # Some ASCII control characters
     # 0x00 and 0x0a are for termination and newline respectively
     *range(16),
-    # unassigned
-    *[0xFFFE]*4,
+    # unassigned, e with acute, n with tilde, o with diaeresis
+    0xFFFE, 0x00E9, 0x00F1, 0x00F6,
     # copyright, L with stroke, z with dot, e with tail
     0x00A9, 0x0141, 0x017C, 0x0119,
     # A button, B button, d-pad, bird

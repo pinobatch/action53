@@ -24,7 +24,7 @@
 lineImgBuf = $0100
 lineImgBufLen = 128
 FONT_HT = 8
-FIRST_PRINTABLE_CU = $14  ;$20 for starting on ascii printable
+FIRST_PRINTABLE_CU = $11  ;$20 for starting on ascii printable
 
 srcStr = $00
 horzPos = $04
