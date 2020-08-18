@@ -281,6 +281,8 @@ mapper, but it becomes apparent when the game is inserted into a
 CHR RAM multicart.  So I've added a mechanism for the config file to
 fix such bugs directly in the binary during the build process.
 
+Example of a valid string: F820:A9008DFF07
+
 Return a pair (address as int, bytes to write there).
 
 """
