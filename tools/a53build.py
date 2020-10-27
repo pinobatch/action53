@@ -356,17 +356,17 @@ def get_mapmode(romdata):
 # ROM and title validation ##########################################
 
 players_types = {
-    '1': 0,  # 1 player
-    '2': 1,  # 2 players ONLY
-    '1-2': 2,  # 1 or 2 players
+    '1': 0,        # 1 player
+    '2': 1,        # 2 players ONLY
+    '1-2': 2,      # 1 or 2 players
     '1-2 alt': 3,  # 1 or 2 players alternating
-    '1-3': 4,  # 1 to 3 players
-    '1-4': 5,  # 1 to 4 players
+    '1-3': 4,      # 1 to 3 players
+    '1-4': 5,      # 1 to 4 players
     '2-4 alt': 6,  # 2 to 4 players alternating
     '2-6 alt': 7,  # 2 to 6 players alternating
-    '2-4': 8,  # 2 to 4 players w/Four Score
+    '2-4': 8,      # 2 to 4 players w/Four Score
+    'none': 255,   # hide
 }
-
 
 def pad_nrom128(rom):
     """Pad a 16 KiB PRG ROM to 32 KiB, leaving larger PRG ROM alone.
@@ -441,7 +441,7 @@ warnings is a list of warning strings
     except KeyError:
         mapmode = get_mapmode(romdata)
         if trace:
-            w("guessed mapmode %02x" % mapmode)
+            w("%s: guessed mapmode %02x" % (t['rom'], mapmode))
     else:
         try:
             mapmode = int(mapmode.lstrip('$'), 16)

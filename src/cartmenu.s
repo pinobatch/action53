@@ -59,6 +59,7 @@ tab_tilelens: .res MAX_TABS
 tab_xoffsets: .res MAX_TABS
 tab_title_offsets: .res MAX_TABS
 draw_step: .res 1
+draw_desc_step: .res 1
 blit_step: .res 1
 draw_progress: .res 1
 num_pages: .res 1
@@ -95,7 +96,7 @@ num_lines_on_page: .res 1
 ; know how many blank lines to copy
 prev_lines_on_page: .res 1
 
-; draw steps
+; draw_step values
 DRAWS_IDLE = 0
 DRAWS_TABS = 2
   ; single frame: draw borders under tabs
@@ -113,6 +114,13 @@ DRAWS_ARROW = 8
 DRAWS_SCREENSHOT = 10
   ; draw_progress 0-6: tile row to decompress to SCREENSHOT_BASE_ADDR
   ; next step IDLE
+
+; draw_desc_step values
+
+  ; line 1 has a 
+DRAWDESC_TITLEAUTHOR = 0
+DRAWDESC_START = 2
+DRAWDESC_CONTINUE = 4
 
 MOUSE_TAB_WIDTH = 32
 MOUSE_LISTENTRY_HEIGHT = 8
@@ -972,6 +980,31 @@ steps:
 .endproc
 
 ;;
+; Prepares a buffer to be copied to the screen, based on the current
+; draw_step and draw_progress.
+.proc draw_step_description
+  sta $4444
+  jsr clearLineImg
+  lda cur_titleno
+  jsr get_titledir_a
+
+  ldx draw_progress
+  bne :+
+    stx draw_desc_step
+  :
+  ldx draw_desc_step
+  lda steps+1,x
+  pha
+  lda steps,x
+  pha
+  rts
+steps:
+  .addr draw_desc_title-1
+  .addr draw_desc_start-1
+  .addr draw_desc_continue-1
+.endproc
+
+;;
 ; Copies a buffer to the screen, based on the current
 ; draw_step and draw_progress.
 .proc blit_step_dispatch
@@ -1282,82 +1315,96 @@ not2ndhalf:
   jmp copyLineImg
 .endproc
 
-.proc draw_step_description
-  jsr clearLineImg
-  lda cur_titleno
-  jsr get_titledir_a
-
-  lda draw_progress
-  beq draw_step_titlelist::have_titledir
-  cmp #2
-  bcc continue_title     ; 1. year and author
-  beq do_players         ; 2. player count
-  cmp #4
-  bcc line_done          ; 3. blank line
-  beq start_description  ; 4. first line of description
-  jmp continue_description
-continue_title:
+.proc draw_desc_title
   lda screenshot_titleno
   cmp cur_titleno
   beq :+
     jsr hide_screenshot
   :
-  ldy #'2'
-  sty interbank_fetch_buf
-  ldy #'0'
-  sty interbank_fetch_buf+1
-  ldy #0
-  sty interbank_fetch_buf+4
-  ldy #3
-  lda (0),y
-  sec
-  sbc #2000-1970
-  bcs not_before_2000
-  dec interbank_fetch_buf
-  ldy #'9'
-  sty interbank_fetch_buf+1
-  adc #256-100
-not_before_2000:
-  jsr bcd8bit
-  ora #'0'
-  sta interbank_fetch_buf+3
-  lda 0
-  and #$0F
-  ora #'0'
-  sta interbank_fetch_buf+2
-  lda 0
-  lsr a
-  lsr a
-  lsr a
-  lsr a
-  clc
-  adc interbank_fetch_buf+1
-  sta interbank_fetch_buf+1
-  lda #>interbank_fetch_buf
-  ldy #<interbank_fetch_buf
-  ldx #0
-  jsr vwfPuts
 
-  lda desc_data_ptr+1
-  ldy desc_data_ptr
-  ldx #24
-  bne have_line_ptr_with_x
-do_players:
+  ; Line 0: Get the title pointer
+  lda draw_progress
+  beq draw_step_titlelist::have_titledir
+
+  ; Line 1: Draw the year
+  ldx #12
+  cmp #1
+  bne no_year
+    ldy #'2'
+    sty interbank_fetch_buf
+    ldy #'0'
+    sty interbank_fetch_buf+1
+    ldy #0
+    sty interbank_fetch_buf+4
+    ldy #3
+    lda (0),y
+    sec
+    sbc #2000-1970
+    bcs not_before_2000
+      dec interbank_fetch_buf
+      ldy #'9'
+      sty interbank_fetch_buf+1
+      adc #256-100
+    not_before_2000:
+    jsr bcd8bit
+    ora #'0'
+    sta interbank_fetch_buf+3
+    lda 0
+    and #$0F
+    ora #'0'
+    sta interbank_fetch_buf+2
+    lda 0
+    lsr a
+    lsr a
+    lsr a
+    lsr a
+    clc
+    adc interbank_fetch_buf+1
+    sta interbank_fetch_buf+1
+    lda #>interbank_fetch_buf
+    ldy #<interbank_fetch_buf
+    ldx #0
+    jsr vwfPuts
+    ldx #24
+  no_year:
+
+  ; Lines 1+: Draw the author's name
+  ldy #0
+  lda (desc_data_ptr),y
+  bne desc_data_continue_with_x
+
+  ; At the end of the author, if there's a number of players
+  ; in the titledata, display it
+  lda #DRAWDESC_START
+  sta draw_desc_step
   ldy #4
   lda (0),y
   asl a
+  bcs draw_desc_start
   tax
   lda numplayers_names+1,x
   ldy numplayers_names,x
-have_line_ptr:
   ldx #0
-have_line_ptr_with_x:
+  beq desc_data_ay_with_x
+.endproc
+.proc desc_data_continue_with_x
+  lda desc_data_ptr+1
+  ldy desc_data_ptr
+  ; fallthrough
+.endproc
+.proc desc_data_ay_with_x
   jsr vwfPuts
+  sta desc_data_ptr+1
+  sty desc_data_ptr
 line_done:
   lda #16
   jmp invertTiles
+.endproc
 
-start_description:
+.proc draw_desc_start
+  ; Draw a blank line and set up the description text pointer
+  ldy #DRAWDESC_CONTINUE
+  sty draw_desc_step
   ldy #10
   clc
   lda (0),y
@@ -1367,8 +1414,10 @@ start_description:
   lda (0),y
   adc DESCSLIST+1
   sta desc_data_ptr+1
+  jmp desc_data_ay_with_x::line_done
+.endproc
 
-continue_description:
+.proc draw_desc_continue
   lda desc_data_ptr
   sta 0
   lda desc_data_ptr+1
@@ -1387,10 +1436,10 @@ continue_description:
     ; End of text: Draw blank lines until finished
     lda num_lines_on_page
     cmp #MAX_LINES
-    bcc line_done
+    bcc desc_data_ay_with_x::line_done
     lda draw_progress
     sta num_lines_on_page
-    jmp line_done
+    bcs desc_data_ay_with_x::line_done
   not_eot:
 
   ; Decompress using DTE
@@ -1415,7 +1464,7 @@ continue_description:
   lda #>dte_output_buf
   ldy #<dte_output_buf
   jsr vwfPuts
-  jmp line_done
+  jmp desc_data_ay_with_x::line_done
 .endproc
 
 .proc draw_step_screenshot

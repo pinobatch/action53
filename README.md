@@ -236,7 +236,8 @@ Begins a new activity with this name.
 
     author=Justin Bailey
 
-The author or copyright owner of the activity.
+The author or copyright owner of the activity.  Can be multiple
+lines of text.
 
     year=2011
 
@@ -264,6 +265,7 @@ How many players can play at once.  Acceptable values are
 `1`, `2`, `1-2`, `1-2 alt`, `1-3`, `1-4`, `2-4 alt`, `2-6 alt`, and
 `2-4`.  `2` means the game is for two players only, like
 "Fire Breathers" from _Action 52_.  If omitted, uses `1`.
+Use `none` to hide the players line entirely.
 
     screenshot=screenshots/Wrecking Ball Boy.png
 
