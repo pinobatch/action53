@@ -53,7 +53,7 @@ def ls_roms(folder='.'):
 # After this, the standard reset patch in $C000-$FFFF takes over:
 # LDX #$FF STX $8000  ; set outer bank to last
 # JMP ($FFFC)  ; jump to start of menu
-resetpatchmaster = a2b_hex("A9018D00208D00508D0080A9818D00506CFCFF")
+resetpatchtemplate = a2b_hex("A9018D00208D00508D0080A9818D00506CFCFF")
 
 def make_submulti(outfilename, rom80_filename, resetpatchaddr, romC0_filename):
 
@@ -84,14 +84,14 @@ def make_submulti(outfilename, rom80_filename, resetpatchaddr, romC0_filename):
     # Print the lower bank's old reset vector (formerly in $BFFC-$BFFD)
     # The following code brings the reset vector into the upper 16K,
     # prepares to set the outer bank, and jumps to the submulti's
-    # master reset vector.
+    # primary reset vector.
     # lda #$01 sta $2000 sta $5000 sta $8000 lda #$81 sta $5000 jmp ($FFFC)
-    assert 0x8000 <= resetpatchaddr <= 0xBFFA - len(resetpatchmaster)
-    resetpatchdata = bytearray(resetpatchmaster)
+    assert 0x8000 <= resetpatchaddr <= 0xBFFA - len(resetpatchtemplate)
+    resetpatchdata = bytearray(resetpatchtemplate)
     resetpatchoffset = resetpatchaddr - 0x8000
     prgrom[0x3FFC] = resetpatchaddr & 0xFF
     prgrom[0x3FFD] = (resetpatchaddr >> 8) & 0xFF
-    prgrom[resetpatchoffset:resetpatchoffset + len(resetpatchmaster)] = resetpatchdata
+    prgrom[resetpatchoffset:resetpatchoffset + len(resetpatchtemplate)] = resetpatchdata
 
     inesheader = bytearray(b"NES\x1A")
     inesheader.extend([(len(prgrom) // 16384),
