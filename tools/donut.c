@@ -1,3 +1,5 @@
+// Donut compressor for NES tile data by JRoatch
+
 #include <stdio.h>   /* I/O */
 #include <errno.h>   /* errno */
 #include <stdlib.h>  /* exit(), strtol() */
@@ -6,6 +8,23 @@
 #include <stdint.h>  /* uint8_t */
 #include <string.h>  /* memcpy() */
 #include <getopt.h>  /* getopt_long() */
+
+// Added by Pino: Setting stdin/stdout to binary mode under Windows
+// All calls to set_fd_binary() also added by Pino
+#if defined (_WIN32)
+#include <io.h>
+#include <fcntl.h>
+#define fd_isatty _isatty
+#endif
+static inline void set_fd_binary(unsigned int fd) {
+#ifdef _WIN32
+  _setmode(fd, _O_BINARY);
+#else
+  (void) fd;
+#endif
+}
+// End added by Pino
+
 
 const char *VERSION_TEXT = "Donut 1.7\n";
 const char *HELP_TEXT =
@@ -784,6 +803,7 @@ int main (int argc, char **argv)
 	if (input_filename == NULL) {
 		if (use_stdio_for_data) {
 			input_file = stdin;
+			set_fd_binary(0);
 		} else {
 			fatal_error("input filename required. Try --help for more info.\n");
 		}
@@ -792,6 +812,7 @@ int main (int argc, char **argv)
 	if (output_filename == NULL) {
 		if (use_stdio_for_data) {
 			output_file = stdout;
+			set_fd_binary(1);
 		} else {
 			fatal_error("output filename required. Try --help for more info.\n");
 		}

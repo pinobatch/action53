@@ -1,3 +1,5 @@
+// DTE text compressor by JRoatch
+
 #include <stdio.h>   /* I/O */
 #include <errno.h>   /* errno */
 #include <stdbool.h> /* bool */
@@ -8,6 +10,23 @@
 #include <getopt.h>  /* getopt_long() */
 #include <ctype.h>   /* ispunct() */
 #include <limits.h>  /* INT_MIN */
+
+// Added by Pino: Setting stdin/stdout to binary mode under Windows
+// All calls to set_fd_binary() also added by Pino
+#if defined (_WIN32)
+#include <io.h>
+#include <fcntl.h>
+#define fd_isatty _isatty
+#endif
+static inline void set_fd_binary(unsigned int fd) {
+#ifdef _WIN32
+  _setmode(fd, _O_BINARY);
+#else
+  (void) fd;
+#endif
+}
+// End added by Pino
+
 
 const char *version_text = "dte 1.2\n";
 const char *help_text =
@@ -610,6 +629,7 @@ int main (int argc, char *argv[])
 	if (input_filename == NULL) {
 		if (use_stdio_for_data) {
 			input_file = stdin;
+			set_fd_binary(0);
 			input_filename = "<stdin>";
 		} else {
 			fatal_error("input filename required. Try --help for more info.\n");
@@ -618,6 +638,7 @@ int main (int argc, char *argv[])
 	if (output_filename == NULL) {
 		if (use_stdio_for_data) {
 			output_file = stdout;
+			set_fd_binary(1);
 			output_filename = "<stdout>";
 		} else {
 			fatal_error("output filename required. Try --help for more info.\n");
